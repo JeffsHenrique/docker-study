@@ -4,7 +4,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 
 - [Section 1: Getting Started](#section-1)
 
-# Section 1
+# Section 1 - INTRODUCTION
 
 - [What Is Docker](#what-is-docker)
 - [Why Docker & Containers?](#why-docker--containers)
@@ -297,3 +297,409 @@ CMD [ "node", "app.mjs" ]
 **docker ps** - show containers
 
 **docker stop [containerID]**
+
+# Section 2 - DOCKER IMAGES & CONTAINERS: THE CORE BUILDING BLOCKS
+
+- [Images & Containers: What and Why?](#images--containers-what-and-why)
+- [Using & Running External (Pre-Built) Images](#using--running-external-pre-built-images)
+- [Building your own Image with a Dockerfile]()
+- [Running a Container based on your own Image]()
+- [EXPOSE & A Little Utility Functionality]()
+- [Images are Read-Only!]()
+- [Understanding Image Layers]()
+- [A First Summary]()
+
+## Images & Containers: What and Why
+
+### **1. What is a Docker Image?**
+- A **Docker image** is a **read-only template** that contains everything needed to run an application:
+  - Application code
+  - Runtime environment (e.g., Node.js, Python)
+  - Libraries and dependencies
+  - Configuration files
+- Images are built using a **Dockerfile**, which defines the steps to create the image.
+- Images are stored in a **registry** (like Docker Hub) and can be shared or reused.
+
+---
+
+### **2. What is a Docker Container?**
+- A **container** is a **running instance of a Docker image**.
+- It’s an isolated environment where the application runs, separate from the host system and other containers.
+- Containers are lightweight because they share the host OS kernel.
+
+---
+
+### **3. Why Use Images and Containers?**
+#### **Why Images?**
+1. **Consistency**: Images ensure the app runs the same way everywhere (dev, test, production).
+2. **Reusability**: You can reuse images for multiple containers.
+3. **Versioning**: Images can be tagged (e.g., `v1.0`, `latest`) for easy updates and rollbacks.
+4. **Portability**: Images can be shared via registries like Docker Hub.
+
+#### **Why Containers?**
+1. **Isolation**: Each container runs in its own environment, avoiding conflicts.
+2. **Lightweight**: Containers share the host OS kernel, making them faster and more efficient than VMs.
+3. **Scalability**: You can easily start, stop, or replicate containers.
+4. **Portability**: Containers can run on any system with Docker installed.
+
+---
+
+### **4. Key Concepts:**
+- **Dockerfile**: A text file with instructions to build an image.
+  Example:
+  ```dockerfile
+  FROM python:3.8
+  COPY . /app
+  RUN pip install -r requirements.txt
+  CMD ["python", "app.py"]
+  ```
+- **Layered Architecture**: Images are made up of layers. Each instruction in a Dockerfile creates a new layer, which makes images efficient and reusable.
+- **Container Lifecycle**:
+  - Create: `docker create`
+  - Start: `docker start`
+  - Stop: `docker stop`
+  - Remove: `docker rm`
+
+---
+
+### **5. Real-World Example:**
+Imagine you’re building a web app:
+- **Step 1**: Create a Dockerfile to define the app’s environment (e.g., Node.js, dependencies).
+- **Step 2**: Build the image:
+  ```bash
+  docker build -t my-web-app .
+  ```
+- **Step 3**: Run the container:
+  ```bash
+  docker run -d -p 80:3000 my-web-app
+  ```
+  Now your app is running in an isolated container, accessible on port 80!
+
+---
+
+### **Key Takeaway:**
+- **Images** are the blueprints.
+- **Containers** are the running instances of those blueprints.
+- Together, they make apps **consistent, portable, and scalable**.
+
+---
+
+## Using & Running External (Pre-Built) Images
+
+### **1. What are Pre-Built Images?**
+- Pre-built images are **ready-to-use Docker images** available in public or private registries (like Docker Hub).
+- Examples: `nginx`, `postgres`, `node`, `python`, etc.
+- These images save you time because you don’t have to build everything from scratch.
+
+---
+
+### **2. How to Use Pre-Built Images**
+#### **Step 1: Pull the Image**
+- Use the `docker pull` command to download the image from a registry (e.g., Docker Hub).
+  ```bash
+  docker pull nginx
+  ```
+  This downloads the latest `nginx` image.
+
+#### **Step 2: Run the Image as a Container**
+- Use the `docker run` command to start a container from the image.
+  ```bash
+  docker run -d -p 8080:80 nginx
+  ```
+  - `-d`: Run in detached mode (in the background).
+  - `-p 8080:80`: Map port 80 of the container to port 8080 on your host.
+  - `nginx`: The image to use.
+
+#### **Step 3: Verify the Container**
+- Check if the container is running:
+  ```bash
+  docker ps
+  ```
+- Open your browser and go to `http://localhost:8080`. You should see the Nginx welcome page!
+
+---
+
+### **3. Common Commands for Pre-Built Images**
+1. **Search for Images**:
+   ```bash
+   docker search nginx
+   ```
+   This lists all `nginx`-related images on Docker Hub.
+
+2. **Pull a Specific Version**:
+   ```bash
+   docker pull nginx:1.21
+   ```
+   This pulls version `1.21` of the `nginx` image.
+
+3. **Run with Environment Variables**:
+   ```bash
+   docker run -d -e MYSQL_ROOT_PASSWORD=my-secret-pw mysql
+   ```
+   This runs a MySQL container with the root password set.
+
+4. **Mount a Volume**:
+   ```bash
+   docker run -d -v /host/path:/container/path nginx
+   ```
+   This mounts a directory from your host into the container.
+
+5. **Remove a Container**:
+   ```bash
+   docker rm <container_id>
+   ```
+
+6. **Remove an Image**:
+   ```bash
+   docker rmi nginx
+   ```
+
+---
+
+### **4. Example: Running a Pre-Built PostgreSQL Image**
+1. Pull the image:
+   ```bash
+   docker pull postgres
+   ```
+2. Run the container:
+   ```bash
+   docker run -d -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 postgres
+   ```
+3. Connect to the database using a PostgreSQL client (e.g., `psql`).
+
+---
+
+### **Key Takeaway:**
+- Pre-built images save time and effort.
+- Use `docker pull` to download and `docker run` to start containers.
+- Customize containers with ports, volumes, and environment variables.
+
+---
+
+## Building Your Own Image with a Dockerfile
+
+### **1. What is a Dockerfile?**
+- A **Dockerfile** is a text file that contains instructions for building a Docker image.
+- Each instruction creates a new **layer** in the image, making it efficient and reusable.
+
+---
+
+### **2. Basic Dockerfile Instructions**
+Here are the most common instructions:
+
+1. **`FROM`**: Specifies the base image to build upon.
+   ```dockerfile
+   FROM python:3.8
+   ```
+
+2. **`WORKDIR`**: Sets the working directory inside the container.
+   ```dockerfile
+   WORKDIR /app
+   ```
+
+3. **`COPY`**: Copies files from your host to the container.
+   ```dockerfile
+   COPY . /app
+   ```
+
+4. **`RUN`**: Executes commands during the build process (e.g., installing dependencies).
+   ```dockerfile
+   RUN pip install -r requirements.txt
+   ```
+
+5. **`CMD`**: Specifies the default command to run when the container starts.
+   ```dockerfile
+   CMD ["python", "app.py"]
+   ```
+
+6. **`EXPOSE`**: Documents the port the container listens on (doesn’t actually publish it).
+   ```dockerfile
+   EXPOSE 80
+   ```
+
+---
+
+### **3. Example Dockerfile**
+Let’s build a simple Python app:
+```dockerfile
+# Use the official Python image as the base
+FROM python:3.8
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the requirements file and install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose port 80
+EXPOSE 80
+
+# Run the application
+CMD ["python", "app.py"]
+```
+
+---
+
+### **4. Building the Image**
+1. Save the Dockerfile in your project directory.
+2. Run the `docker build` command:
+   ```bash
+   docker build -t my-python-app .
+   ```
+   - `-t my-python-app`: Tags the image with a name (`my-python-app`).
+   - `.`: Specifies the build context (current directory).
+
+3. Verify the image:
+   ```bash
+   docker images
+   ```
+
+---
+
+### **5. Running the Container**
+1. Start a container from your custom image:
+   ```bash
+   docker run -d -p 4000:80 my-python-app
+   ```
+   - `-d`: Run in detached mode.
+   - `-p 4000:80`: Map port 80 of the container to port 4000 on your host.
+
+2. Access your app at `http://localhost:4000`.
+
+---
+
+### **6. Best Practices for Dockerfiles**
+1. **Minimize Layers**: Combine multiple `RUN` commands into one to reduce the number of layers.
+   ```dockerfile
+   RUN apt-get update && apt-get install -y \
+       package1 \
+       package2
+   ```
+
+2. **Use `.dockerignore`**: Exclude unnecessary files (like `node_modules` or `.git`) from the build context to speed up the build.
+
+3. **Leverage Caching**: Docker caches layers. Place instructions that change less frequently (e.g., installing dependencies) earlier in the Dockerfile.
+
+4. **Use Multi-Stage Builds**: For complex apps, use multiple `FROM` statements to keep the final image small.
+
+---
+
+### **Key Takeaway:**
+- A **Dockerfile** is a recipe for building custom Docker images.
+- Use `docker build` to create the image and `docker run` to start the container.
+- Follow best practices to optimize your Dockerfile.
+
+---
+
+## Running a Container based on your image
+
+### **1. Basic Command: `docker run`**
+Use the `docker run` command to start a container from your image:
+```bash
+docker run [OPTIONS] IMAGE_NAME [COMMAND]
+```
+
+---
+
+### **2. Common Options for `docker run`**
+- **`-d`**: Run the container in **detached mode** (background).
+  ```bash
+  docker run -d my-python-app
+  ```
+- **`-p`**: Map a **host port** to a **container port**.
+  ```bash
+  docker run -p 4000:80 my-python-app
+  ```
+- **`--name`**: Assign a custom name to the container.
+  ```bash
+  docker run --name my-container my-python-app
+  ```
+- **`-v`**: Mount a **volume** to persist data.
+  ```bash
+  docker run -v /host/path:/container/path my-python-app
+  ```
+- **`-e`**: Set **environment variables**.
+  ```bash
+  docker run -e ENV_VAR=value my-python-app
+  ```
+
+---
+
+### **3. Example: Running Your Custom Image**
+Suppose you built an image named `my-python-app`:
+1. **Run the container in the background** and map port 4000 (host) to 80 (container):
+   ```bash
+   docker run -d -p 4000:80 my-python-app
+   ```
+2. **Access your app** at `http://localhost:4000`.
+
+---
+
+### **4. Common Use Cases**
+#### **Run Interactively (e.g., for debugging)**
+Use `-it` to start an interactive shell inside the container:
+```bash
+docker run -it my-python-app /bin/bash
+```
+- Now you can run commands inside the container (e.g., `ls`, `cat app.py`).
+
+#### **Pass Environment Variables**
+```bash
+docker run -e DATABASE_URL=postgres://user:pass@host/db my-python-app
+```
+
+---
+
+### **5. Troubleshooting Commands**
+- **List running containers**:
+  ```bash
+  docker ps
+  ```
+- **View logs**:
+  ```bash
+  docker logs <container_id>
+  ```
+- **Stop a container**:
+  ```bash
+  docker stop <container_id>
+  ```
+- **Remove a container**:
+  ```bash
+  docker rm <container_id>
+  ```
+
+---
+
+### **6. Best Practices**
+- Use `--restart` policies to handle container crashes:
+  ```bash
+  docker run --restart=always my-python-app
+  ```
+- Clean up unused containers to save disk space:
+  ```bash
+  docker system prune
+  ```
+
+---
+
+### **Real-World Example:**
+Imagine you built a Node.js app image:
+1. Run it with port mapping and a volume for logs:
+   ```bash
+   docker run -d -p 3000:3000 -v ./logs:/app/logs my-node-app
+   ```
+2. Your app is now live on port 3000, and logs are stored in `./logs` on your host machine.
+
+---
+
+### **Key Takeaway:**
+- `docker run` is your go-to command to start containers from images.
+- Use options like `-p`, `-v`, and `-e` to customize runtime behavior.
+- Always clean up unused containers to optimize resources.
+
+---
+
