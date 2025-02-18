@@ -302,9 +302,8 @@ CMD [ "node", "app.mjs" ]
 
 - [Images & Containers: What and Why?](#images--containers-what-and-why)
 - [Using & Running External (Pre-Built) Images](#using--running-external-pre-built-images)
-- [Building your own Image with a Dockerfile]()
-- [Running a Container based on your own Image]()
-- [EXPOSE & A Little Utility Functionality]()
+- [Building your own Image with a Dockerfile](#building-your-own-image-with-a-dockerfile)
+- [Running a Container based on your own Image](#running-a-container-based-on-your-image)
 - [Images are Read-Only!]()
 - [Understanding Image Layers]()
 - [A First Summary]()
