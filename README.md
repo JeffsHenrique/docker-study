@@ -1071,3 +1071,664 @@ Imagine you’re running a web app:
 
 ---
 
+## Stopping & Restarting Containers
+
+### **1. Stopping Containers**
+When you stop a container, it gracefully shuts down the processes inside it. Here’s how to do it:
+
+#### **Command: `docker stop`**
+```bash
+docker stop <container_id_or_name>
+```
+- **Example**:
+  ```bash
+  docker stop my-nginx
+  ```
+- **What Happens**:
+  - Docker sends a `SIGTERM` signal to the main process inside the container, allowing it to shut down gracefully.
+  - If the process doesn’t stop within 10 seconds, Docker sends a `SIGKILL` to force it to stop.
+
+#### **Force-Stop a Container**
+If a container is unresponsive, you can force-stop it:
+```bash
+docker kill <container_id_or_name>
+```
+- This sends a `SIGKILL` immediately, bypassing the graceful shutdown.
+
+---
+
+### **2. Restarting Containers**
+Restarting a container stops and starts it again. This is useful for applying changes or recovering from issues.
+
+#### **Command: `docker restart`**
+```bash
+docker restart <container_id_or_name>
+```
+- **Example**:
+  ```bash
+  docker restart my-nginx
+  ```
+- **What Happens**:
+  - The container is stopped (gracefully) and then started again.
+  - Any changes made to the container’s writable layer (e.g., files created, configurations modified) are preserved.
+
+---
+
+### **3. Starting Stopped Containers**
+If a container is stopped, you can start it again without recreating it.
+
+#### **Command: `docker start`**
+```bash
+docker start <container_id_or_name>
+```
+- **Example**:
+  ```bash
+  docker start my-nginx
+  ```
+- **Options**:
+  - `-a` (attach): Attach to the container’s output (like `docker run`).
+  - `-i` (interactive): Attach to the container interactively.
+
+---
+
+### **4. Common Use Cases**
+#### **Graceful Shutdown**
+- Use `docker stop` to ensure your app shuts down properly (e.g., saving data, closing connections).
+
+#### **Force-Stop Unresponsive Containers**
+- Use `docker kill` if a container is frozen or unresponsive.
+
+#### **Apply Configuration Changes**
+- Restart a container to apply changes (e.g., updated environment variables or mounted files).
+
+#### **Recover from Crashes**
+- Use `docker start` to bring back a stopped container without losing its state.
+
+---
+
+### **5. Example Workflow**
+1. **Stop a Running Container**:
+   ```bash
+   docker stop my-web-app
+   ```
+2. **Start the Container Again**:
+   ```bash
+   docker start my-web-app
+   ```
+3. **Restart the Container** (stop + start in one command):
+   ```bash
+   docker restart my-web-app
+   ```
+
+---
+
+### **6. Best Practices**
+1. **Use `docker stop` for Graceful Shutdowns**:
+   - Always prefer `docker stop` over `docker kill` unless the container is unresponsive.
+2. **Monitor Container Logs**:
+   - Check logs after restarting to ensure everything is working:
+     ```bash
+     docker logs my-web-app
+     ```
+3. **Automate Restarts**:
+   - Use `--restart` policies to automatically restart containers on failure:
+     ```bash
+     docker run -d --restart=always my-web-app
+     ```
+
+---
+
+### **Key Takeaway:**
+- **`docker stop`**: Gracefully stops a container.
+- **`docker kill`**: Force-stops a container.
+- **`docker restart`**: Stops and starts a container in one command.
+- **`docker start`**: Starts a stopped container.
+
+---
+
+## Understanding Attached & Detached Containers
+
+### **1. Attached Containers (Foreground Mode)**
+- **What**: When you run a container in **attached mode**, it stays connected to your terminal, and you see its logs/output in real time.
+- **Command**:
+  ```bash
+  docker run [image_name]
+  ```
+  - Example:
+    ```bash
+    docker run nginx
+    ```
+- **Behavior**:
+  - The container runs in the foreground.
+  - You see all logs/output directly in your terminal.
+  - Pressing `Ctrl+C` stops the container.
+- **Use Case**:
+  - Debugging or testing short-lived processes (e.g., running a script and seeing immediate output).
+
+---
+
+### **2. Detached Containers (Background Mode)**
+- **What**: When you run a container in **detached mode**, it runs in the background, freeing up your terminal.
+- **Command**:
+  ```bash
+  docker run -d [image_name]
+  ```
+  - Example:
+    ```bash
+    docker run -d nginx
+    ```
+- **Behavior**:
+  - The container starts and runs in the background.
+  - You get the container ID but don’t see logs/output unless you explicitly check them.
+- **Use Case**:
+  - Running long-lived services (e.g., web servers, databases).
+
+---
+
+### **3. Switching Between Attached and Detached**
+#### **Detach from an Attached Container**
+If you started a container in attached mode and want to detach:
+- Press `Ctrl+P` followed by `Ctrl+Q`.
+- The container keeps running in the background.
+
+#### **Reattach to a Detached Container**
+To reconnect to a running container’s output:
+```bash
+docker attach <container_id_or_name>
+```
+- Example:
+  ```bash
+  docker attach my-nginx
+  ```
+- **Warning**: Pressing `Ctrl+C` here will **stop the container** (not just detach). To detach again, use `Ctrl+P` + `Ctrl+Q`.
+
+---
+
+### **4. Running Interactive Containers**
+For containers that need input (e.g., a shell):
+- Use `-it` (interactive + TTY) to attach and interact:
+  ```bash
+  docker run -it ubuntu /bin/bash
+  ```
+- This lets you type commands into the container’s shell.
+
+---
+
+### **5. Key Differences**
+
+| Feature               | Attached (Foreground)          | Detached (Background)          |
+|-----------------------|--------------------------------|--------------------------------|
+| **Terminal Output**   | Logs visible in real time      | No output unless checked       |
+| **Terminal Control**  | `Ctrl+C` stops the container   | Terminal freed for other tasks |
+| **Use Case**          | Debugging, short-lived tasks   | Long-running services          |
+
+---
+
+### **6. Real-World Example**
+1. **Run a Detached Web Server**:
+   ```bash
+   docker run -d -p 8080:80 --name my-web nginx
+   ```
+2. **Check Logs**:
+   ```bash
+   docker logs my-web
+   ```
+3. **Reattach to the Container** (if needed):
+   ```bash
+   docker attach my-web
+   ```
+4. **Detach Again**:
+   Press `Ctrl+P` + `Ctrl+Q`.
+
+---
+
+### **7. Best Practices**
+- Use **detached mode** for production services (e.g., databases, APIs).
+- Use **attached mode** for debugging or interactive tasks (e.g., shell access).
+- Always name your containers (`--name`) for easier management.
+
+---
+
+### **Key Takeaway**:
+- **Attached** = Foreground (logs visible, terminal blocked).
+- **Detached** = Background (terminal free, use `docker logs` to check output).
+- Use `-it` for interactive shells and `Ctrl+P` + `Ctrl+Q` to detach safely.
+
+---
+
+## Entering Interactive Mode
+
+### **1. What is Interactive Mode?**
+- Interactive mode allows you to **connect to a running container** and interact with it as if you were inside the container itself.
+- It’s commonly used for:
+  - Running commands in a shell (e.g., `bash`, `sh`).
+  - Debugging or inspecting the container’s filesystem.
+
+---
+
+### **2. How to Enter Interactive Mode**
+Use the `-it` flags with `docker run` or `docker exec`:
+- `-i`: Keeps the input stream open (interactive).
+- `-t`: Allocates a pseudo-TTY (terminal).
+
+#### **Option 1: Start a New Container in Interactive Mode**
+```bash
+docker run -it [image_name] [command]
+```
+- Example:
+  ```bash
+  docker run -it ubuntu /bin/bash
+  ```
+  - This starts a new Ubuntu container and drops you into a `bash` shell.
+
+#### **Option 2: Attach to a Running Container**
+```bash
+docker exec -it <container_id_or_name> [command]
+```
+- Example:
+  ```bash
+  docker exec -it my-nginx /bin/bash
+  ```
+  - This connects to the `my-nginx` container and starts a `bash` shell.
+
+---
+
+### **3. Common Use Cases**
+#### **Run a Shell in a Container**
+- Start a new container with a shell:
+  ```bash
+  docker run -it python:3.8 /bin/bash
+  ```
+- Attach to a running container with a shell:
+  ```bash
+  docker exec -it my-python-app /bin/sh
+  ```
+
+#### **Debugging**
+- Inspect files or logs inside a container:
+  ```bash
+  docker exec -it my-nginx ls /etc/nginx
+  ```
+
+#### **Install Software**
+- Install tools or dependencies inside a running container:
+  ```bash
+  docker exec -it my-ubuntu apt-get update
+  ```
+
+---
+
+### **4. Exiting Interactive Mode**
+- To **exit the shell** but **keep the container running**, type:
+  ```bash
+  exit
+  ```
+  or press `Ctrl+D`.
+
+- To **detach from the container** without stopping it, press:
+  ```bash
+  Ctrl+P` followed by `Ctrl+Q
+  ```
+
+---
+
+### **5. Example Workflow**
+1. **Start a New Container in Interactive Mode**:
+   ```bash
+   docker run -it --name my-ubuntu ubuntu /bin/bash
+   ```
+   - You’re now inside the container’s shell.
+
+2. **Run Commands**:
+   ```bash
+   apt-get update
+   apt-get install -y curl
+   curl --version
+   ```
+
+3. **Exit the Shell**:
+   ```bash
+   exit
+   ```
+
+4. **Reattach to the Container**:
+   ```bash
+   docker exec -it my-ubuntu /bin/bash
+   ```
+
+---
+
+### **6. Best Practices**
+- Use **`docker exec`** to interact with running containers instead of starting new ones.
+- Always **name your containers** (`--name`) for easier access.
+- Use **`.dockerignore`** to avoid copying unnecessary files into the container.
+
+---
+
+### **Key Takeaway:**
+- Use `-it` to enter interactive mode with a container.
+- Use `docker run -it` for new containers and `docker exec -it` for running containers.
+- Exit with `exit` or detach with `Ctrl+P` + `Ctrl+Q`.
+
+---
+
+## Deleting Images & Containers
+
+### **1. Deleting Containers**
+#### **Remove a Single Container**
+```bash
+docker rm <container_id_or_name>
+```
+- Example:
+  ```bash
+  docker rm my-nginx
+  ```
+
+#### **Force-Remove a Running Container**
+If the container is running, use the `-f` flag:
+```bash
+docker rm -f <container_id_or_name>
+```
+
+#### **Remove All Stopped Containers**
+Clean up all stopped containers:
+```bash
+docker container prune
+```
+- Confirm with `y` when prompted.
+
+---
+
+### **2. Deleting Images**
+#### **Remove a Single Image**
+```bash
+docker rmi <image_id_or_name>
+```
+- Example:
+  ```bash
+  docker rmi my-python-app
+  ```
+
+#### **Remove All Unused Images**
+Clean up images not associated with a container:
+```bash
+docker image prune -a
+```
+- Confirm with `y` when prompted.
+
+---
+
+### **3. Advanced Cleanup**
+#### **Remove Everything**
+To remove all containers, images, networks, and volumes:
+```bash
+docker system prune -a
+```
+- **Warning**: This is a **nuclear option**—it removes everything not actively in use.
+
+#### **Remove Volumes**
+To remove unused volumes:
+```bash
+docker volume prune
+```
+
+---
+
+### **4. Example Workflow**
+1. **List Containers**:
+   ```bash
+   docker ps -a
+   ```
+2. **Remove a Stopped Container**:
+   ```bash
+   docker rm my-nginx
+   ```
+3. **List Images**:
+   ```bash
+   docker images
+   ```
+4. **Remove an Unused Image**:
+   ```bash
+   docker rmi my-python-app
+   ```
+5. **Clean Up Everything**:
+   ```bash
+   docker system prune -a
+   ```
+
+---
+
+### **5. Best Practices**
+- **Regular Cleanup**: Use `docker system prune` periodically to free up disk space.
+- **Avoid `-f` Unless Necessary**: Force-removing containers can lead to data loss.
+- **Use `.dockerignore`**: Prevent unnecessary files from bloating your images.
+
+---
+
+### **Key Takeaway:**
+- Use `docker rm` to delete containers and `docker rmi` to delete images.
+- Use `docker system prune` for a full cleanup.
+- Always double-check before running `docker system prune -a`!
+
+---
+
+## Removing Stopped Containers Automatically
+
+### **1. Why Automate Removal?**
+- Avoids clutter from stopped containers.
+- Saves disk space.
+- Reduces manual cleanup.
+
+---
+
+### **2. Methods to Auto-Remove Stopped Containers**
+
+#### **Method 1: Use `--rm` Flag When Running Containers**
+- Add the `--rm` flag to automatically remove the container **when it exits**.
+  ```bash
+  docker run --rm -d -p 8080:80 nginx
+  ```
+  - The container will be deleted once it stops.
+
+#### **Method 2: Auto-Remove All Stopped Containers**
+Use `docker container prune` to remove **all stopped containers**:
+```bash
+docker container prune
+```
+- Confirm with `y` when prompted.
+
+#### **Method 3: Use a `docker run` Policy**
+For **long-running containers**, use `--restart` with `--rm`:
+```bash
+docker run --rm --restart=unless-stopped -d my-app
+```
+- The container restarts if it crashes but is removed if explicitly stopped.
+
+---
+
+### **3. Automate with Cron Jobs (Linux/macOS)**
+Schedule `docker container prune` to run periodically (e.g., daily).
+
+1. Open your crontab:
+   ```bash
+   crontab -e
+   ```
+2. Add a line to run the cleanup daily at midnight:
+   ```bash
+   0 0 * * * docker container prune -f
+   ```
+   - `-f` skips the confirmation prompt.
+
+---
+
+### **4. Use Docker Compose Auto-Remove**
+In a `docker-compose.yml`, set `auto_remove` for specific services:
+```yaml
+services:
+  web:
+    image: nginx
+    restart: unless-stopped
+    auto_remove: true
+```
+
+---
+
+### **5. Example Workflow**
+1. **Run a Temporary Container**:
+   ```bash
+   docker run --rm -it ubuntu /bin/bash
+   ```
+   - When you `exit`, the container is automatically deleted.
+
+2. **Clean Up All Stopped Containers**:
+   ```bash
+   docker container prune -f
+   ```
+
+---
+
+### **6. Best Practices**
+- Use `--rm` for **short-lived containers** (e.g., running tests or scripts).
+- Avoid `--rm` for **persistent services** (e.g., databases) where you need logs or data.
+- Combine with **volumes** to persist data even if containers are removed.
+
+---
+
+### **Key Takeaway:**
+- `--rm` removes the container automatically when it stops.
+- `docker container prune` cleans up all stopped containers.
+- Automate cleanup with cron jobs or Docker Compose policies.
+
+---
+
+## A look behind the scenes: Inspecting Images
+
+### **1. Why Inspect Images?**
+- Understand the **layers** and **history** of an image.
+- Debug issues (e.g., missing files, incorrect configurations).
+- Verify the **size** and **contents** of an image.
+
+---
+
+### **2. Inspecting Images with `docker inspect`**
+The `docker inspect` command provides detailed metadata about an image.
+
+#### **Command**:
+```bash
+docker inspect <image_id_or_name>
+```
+- Example:
+  ```bash
+  docker inspect nginx
+  ```
+
+#### **Output**:
+- A JSON object with details like:
+  - **Layers**: Filesystem layers.
+  - **Config**: Environment variables, working directory, entrypoint, etc.
+  - **Size**: Total size of the image.
+  - **Created**: Timestamp of when the image was built.
+
+#### **Filter Specific Fields**:
+Use `--format` to extract specific information:
+```bash
+docker inspect --format='{{.Config.WorkingDir}}' nginx
+```
+- This returns the working directory of the `nginx` image.
+
+---
+
+### **3. Inspecting Layers with `docker history`**
+The `docker history` command shows the **layers** of an image and how they were built.
+
+#### **Command**:
+```bash
+docker history <image_id_or_name>
+```
+- Example:
+  ```bash
+  docker history nginx
+  ```
+
+#### **Output**:
+- A table showing:
+  - **Layer ID**: Unique identifier for each layer.
+  - **Created**: When the layer was created.
+  - **Created By**: The Dockerfile instruction that created the layer.
+  - **Size**: Size of the layer.
+
+#### **Example Output**:
+```
+IMAGE          CREATED         CREATED BY                                      SIZE
+abc123        2 hours ago     CMD ["nginx", "-g", "daemon off;"]              0B
+def456        2 hours ago     COPY file:1234abcd /etc/nginx/conf.d/default.conf 1.5kB
+ghi789        2 weeks ago     /bin/sh -c #(nop)  EXPOSE 80                    0B
+...            ...            ...                                             ...
+```
+
+---
+
+### **4. Inspecting Layers with `docker image inspect`**
+This is similar to `docker inspect` but focuses on image-specific details.
+
+#### **Command**:
+```bash
+docker image inspect <image_id_or_name>
+```
+
+---
+
+### **5. Inspecting Image Filesystem**
+To explore the filesystem of an image, you can:
+1. **Run the Image Interactively**:
+   ```bash
+   docker run -it <image_id_or_name> /bin/sh
+   ```
+   - Navigate the filesystem manually.
+
+2. **Export the Image Filesystem**:
+   ```bash
+   docker save <image_id_or_name> -o image.tar
+   ```
+   - Extract the `.tar` file to inspect its contents:
+     ```bash
+     tar -xvf image.tar
+     ```
+
+---
+
+### **6. Real-World Example**
+1. **Inspect the `nginx` Image**:
+   ```bash
+   docker inspect nginx
+   ```
+   - Check the `Config` section for environment variables and commands.
+
+2. **View Layer History**:
+   ```bash
+   docker history nginx
+   ```
+   - Identify which layers contribute the most to the image size.
+
+3. **Explore the Filesystem**:
+   ```bash
+   docker run -it nginx /bin/sh
+   ```
+   - Navigate to `/etc/nginx` to see the configuration files.
+
+---
+
+### **7. Best Practices**
+- **Minimize Layers**: Combine multiple `RUN` commands in your Dockerfile to reduce the number of layers.
+- **Use `.dockerignore`**: Exclude unnecessary files to keep the image small.
+- **Regularly Inspect Images**: Understand what’s inside your images to optimize and debug them.
+
+---
+
+### **Key Takeaway:**
+- Use `docker inspect` for detailed metadata.
+- Use `docker history` to see how an image was built layer by layer.
+- Explore the filesystem interactively or by exporting the image.
+
+---
+
