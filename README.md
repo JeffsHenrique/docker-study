@@ -2,9 +2,12 @@
 
 These are my notes from the course **Docker & Kubernetes: The Practical Guide [2025 Edition]**, by Maximilian Schwarzmüller.
 
-- [Section 1: Getting Started](#section-1)
+- [Section 1: INTRODUCTION](#section-1---introduction)
+- [Section 2: DOCKER IMAGES & CONTAINERS: THE CORE BUILDING BLOCKS](#section-2---docker-images--containers-the-core-building-blocks)
 
 # Section 1 - INTRODUCTION
+
+[Click here](#docker--kubernetes) to go to the beginning 😃
 
 - [What Is Docker](#what-is-docker)
 - [Why Docker & Containers?](#why-docker--containers)
@@ -300,13 +303,28 @@ CMD [ "node", "app.mjs" ]
 
 # Section 2 - DOCKER IMAGES & CONTAINERS: THE CORE BUILDING BLOCKS
 
+[Click here](#docker--kubernetes) to go to the beginning 😃
+
 - [Images & Containers: What and Why?](#images--containers-what-and-why)
 - [Using & Running External (Pre-Built) Images](#using--running-external-pre-built-images)
 - [Building your own Image with a Dockerfile](#building-your-own-image-with-a-dockerfile)
 - [Running a Container based on your own Image](#running-a-container-based-on-your-image)
-- [Images are Read-Only!]()
-- [Understanding Image Layers]()
-- [A First Summary]()
+- [Images are Read-Only!](#images-are-read-only)
+- [Understanding Image Layers](#understanding-image-layers)
+- [Managing Images & Containers]()
+- [Stopping & Restarting Containers]()
+- [Understanding Attached & Detached Containers]()
+- [Attaching to an already-running Container]()
+- [Entering Interactive Mode]()
+- [Deleting Images & Containers]()
+- [Removing Stopped Containers Automatically]()
+- [A look behind the scenes: Inspecting Images]()
+- [Copying Files Into & From a container]()
+- [Naming & Tagging Containers and Images]()
+- [Sharing Images - Overview]()
+- [Pushing Images to DockerHub]()
+- [Pulling & Using Shared Images]()
+- [Module Summary]()
 
 ## Images & Containers: What and Why
 
@@ -699,6 +717,357 @@ Imagine you built a Node.js app image:
 - `docker run` is your go-to command to start containers from images.
 - Use options like `-p`, `-v`, and `-e` to customize runtime behavior.
 - Always clean up unused containers to optimize resources.
+
+---
+
+## Images are Read-Only
+
+### **1. What Does "Images are Read-Only" Mean?**
+- A **Docker image** is a **read-only template** used to create containers.
+- Once an image is built, you **cannot modify it**. Any changes you make (e.g., adding files, installing software) happen in the **container layer**, not the image itself.
+
+---
+
+### **2. Why Are Images Read-Only?**
+1. **Consistency**: Ensures the image remains unchanged, so it behaves the same way everywhere.
+2. **Efficiency**: Multiple containers can share the same image layers, saving disk space.
+3. **Immutability**: Prevents accidental changes to the base image, making deployments more reliable.
+
+---
+
+### **3. How Changes Work in Containers**
+When you run a container:
+- Docker adds a **writable layer** (called the **container layer**) on top of the read-only image.
+- Any changes (e.g., creating files, modifying configurations) are stored in this writable layer.
+- When the container is deleted, the writable layer is also deleted. **Changes are not saved to the image**.
+
+---
+
+### **4. Example: Read-Only in Action**
+1. **Pull an Image**:
+   ```bash
+   docker pull nginx
+   ```
+2. **Run a Container**:
+   ```bash
+   docker run -d --name my-nginx nginx
+   ```
+3. **Make Changes in the Container**:
+   - Connect to the container:
+     ```bash
+     docker exec -it my-nginx /bin/bash
+     ```
+   - Create a file:
+     ```bash
+     echo "Hello, Docker!" > /usr/share/nginx/html/test.txt
+     ```
+4. **Stop and Remove the Container**:
+   ```bash
+   docker stop my-nginx
+   docker rm my-nginx
+   ```
+5. **Run a New Container**:
+   ```bash
+   docker run -d --name new-nginx nginx
+   ```
+   - The `test.txt` file is **gone** because the image is read-only, and the writable layer was deleted.
+
+---
+
+### **5. How to Persist Changes**
+If you want to save changes:
+1. **Commit the Container to a New Image**:
+   ```bash
+   docker commit my-nginx my-custom-nginx
+   ```
+   This creates a new image with the changes from the container.
+
+2. **Use Volumes**:
+   Mount a host directory to persist data:
+   ```bash
+   docker run -d -v /host/path:/container/path nginx
+   ```
+
+3. **Use Dockerfile**:
+   Make changes during the image build process:
+   ```dockerfile
+   FROM nginx
+   RUN echo "Hello, Docker!" > /usr/share/nginx/html/test.txt
+   ```
+
+---
+
+### **6. Key Takeaway:**
+- **Images are read-only**: They cannot be modified after creation.
+- **Containers add a writable layer**: Changes are stored here but are lost when the container is deleted.
+- To save changes, **commit the container** or use **volumes** or **Dockerfile**.
+
+---
+
+## Understanding Image Layers
+
+### **1. What Are Image Layers?**
+- Docker images are built using **layers**. Each instruction in a `Dockerfile` creates a new layer.
+- Layers are **read-only**, and they’re stacked on top of each other to form the final image.
+- Layers are cached, making subsequent builds faster and more efficient.
+
+---
+
+### **2. How Layers Work**
+- **Example Dockerfile**:
+  ```dockerfile
+  FROM python:3.8               # Layer 1: Base OS + Python
+  WORKDIR /app                  # Layer 2: Create /app directory
+  COPY requirements.txt .       # Layer 3: Copy requirements.txt
+  RUN pip install -r requirements.txt  # Layer 4: Install dependencies
+  COPY . .                      # Layer 5: Copy app code
+  CMD ["python", "app.py"]      # Layer 6: Set default command
+  ```
+- Each line in the Dockerfile creates a new layer. If you rebuild the image, Docker reuses cached layers unless something changes.
+
+---
+
+### **3. Benefits of Layering**
+1. **Caching**:
+   - If a layer hasn’t changed (e.g., `COPY requirements.txt`), Docker reuses the cached layer, speeding up builds.
+2. **Reusability**:
+   - Layers can be shared between images (e.g., the `python:3.8` base layer).
+3. **Smaller Image Sizes**:
+   - Only changed layers are rebuilt, reducing redundancy.
+
+---
+
+### **4. Visualizing Layers**
+Use `docker history` to see the layers of an image:
+```bash
+docker history my-python-app
+```
+Output:
+```
+IMAGE          CREATED         CREATED BY                                      SIZE
+abc123        2 hours ago     CMD ["python" "app.py"]                         0B
+def456        2 hours ago     COPY . .                                        2.5MB
+ghi789        2 hours ago     RUN pip install -r requirements.txt             150MB
+jkl012        2 hours ago     COPY requirements.txt .                         5kB
+mno345        2 weeks ago     WORKDIR /app                                     0B
+pqr678        3 weeks ago     /bin/sh -c #(nop)  CMD ["python3"]              0B
+...            ...            ...                                             ...
+```
+
+---
+
+### **5. Layer Best Practices**
+1. **Order Matters**:
+   - Place **frequently changing instructions** (e.g., `COPY . .`) **last** to maximize caching.
+   ```dockerfile
+   # Bad: Code changes will invalidate all layers below!
+   COPY . .
+   RUN pip install -r requirements.txt
+
+   # Good: Install dependencies first
+   COPY requirements.txt .
+   RUN pip install -r requirements.txt
+   COPY . .
+   ```
+2. **Minimize Layers**:
+   - Combine multiple `RUN` commands into one to reduce layers:
+     ```dockerfile
+     RUN apt-get update && \
+         apt-get install -y git curl
+     ```
+3. **Use `.dockerignore`**:
+   - Exclude unnecessary files (e.g., `node_modules`, `.git`) to avoid bloating layers.
+
+---
+
+### **6. Key Takeaway:**
+- **Layers are immutable and cached**: Changes to a layer invalidate all layers below it.
+- **Optimize layer order**: Put stable instructions (e.g., installing dependencies) first and volatile instructions (e.g., copying code) last.
+- **Use tools like `docker history`** to analyze layers and debug builds.
+
+---
+
+### **Real-World Example:**
+Imagine you’re building a Node.js app:
+- **Layer 1**: Base image (`FROM node:14`).
+- **Layer 2**: Copy `package.json` and `package-lock.json`.
+- **Layer 3**: Run `npm install`.
+- **Layer 4**: Copy the rest of the app code (`COPY . .`).
+
+If you change your app code (Layer 4), Docker will reuse Layers 1-3 from the cache, saving time!
+
+---
+
+## Managing Images & Containers
+
+### **1. Managing Docker Images**
+#### **List Images**
+To see all images on your system:
+```bash
+docker images
+```
+Output:
+```
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+my-python-app latest    abc123        2 hours ago    150MB
+nginx         latest    def456        3 days ago     133MB
+```
+
+#### **Remove an Image**
+To delete an image:
+```bash
+docker rmi <image_id_or_name>
+```
+Example:
+```bash
+docker rmi my-python-app
+```
+
+#### **Remove All Unused Images**
+To clean up unused images:
+```bash
+docker image prune -a
+```
+
+#### **Pull an Image**
+Download an image from a registry (e.g., Docker Hub):
+```bash
+docker pull nginx
+```
+
+#### **Tag an Image**
+Tag an image for versioning or pushing to a registry:
+```bash
+docker tag my-python-app my-python-app:v1
+```
+
+#### **Push an Image**
+Upload an image to a registry (e.g., Docker Hub):
+```bash
+docker push my-python-app:v1
+```
+
+---
+
+### **2. Managing Docker Containers**
+#### **List Containers**
+To see running containers:
+```bash
+docker ps
+```
+To see all containers (running and stopped):
+```bash
+docker ps -a
+```
+
+#### **Start a Container**
+Start a stopped container:
+```bash
+docker start <container_id_or_name>
+```
+
+#### **Stop a Container**
+Stop a running container:
+```bash
+docker stop <container_id_or_name>
+```
+
+#### **Remove a Container**
+Delete a stopped container:
+```bash
+docker rm <container_id_or_name>
+```
+To force-remove a running container:
+```bash
+docker rm -f <container_id_or_name>
+```
+
+#### **Remove All Stopped Containers**
+Clean up stopped containers:
+```bash
+docker container prune
+```
+
+#### **View Container Logs**
+Check the logs of a container:
+```bash
+docker logs <container_id_or_name>
+```
+
+#### **Run a One-Off Command**
+Execute a command in a running container:
+```bash
+docker exec -it <container_id_or_name> <command>
+```
+Example:
+```bash
+docker exec -it my-nginx /bin/bash
+```
+
+---
+
+### **3. Advanced Management**
+#### **Inspect Containers or Images**
+Get detailed information about a container or image:
+```bash
+docker inspect <container_id_or_name>
+docker inspect <image_id_or_name>
+```
+
+#### **Resource Usage**
+Check CPU, memory, and network usage of containers:
+```bash
+docker stats
+```
+
+#### **Copy Files Between Host and Container**
+Copy files to/from a container:
+```bash
+docker cp <host_path> <container_id_or_name>:<container_path>
+docker cp <container_id_or_name>:<container_path> <host_path>
+```
+Example:
+```bash
+docker cp my-nginx:/etc/nginx/nginx.conf ./nginx.conf
+```
+
+---
+
+### **4. Best Practices**
+1. **Clean Up Regularly**:
+   - Use `docker system prune` to remove unused images, containers, networks, and volumes.
+2. **Use Meaningful Names**:
+   - Name your containers for easier management:
+     ```bash
+     docker run --name my-web-app -d nginx
+     ```
+3. **Monitor Resource Usage**:
+   - Use `docker stats` to keep an eye on container performance.
+
+---
+
+### **Real-World Example:**
+Imagine you’re running a web app:
+1. **List running containers**:
+   ```bash
+   docker ps
+   ```
+2. **Check logs** for errors:
+   ```bash
+   docker logs my-web-app
+   ```
+3. **Clean up** unused containers and images:
+   ```bash
+   docker container prune
+   docker image prune -a
+   ```
+
+---
+
+### **Key Takeaway:**
+- Use `docker images` and `docker ps` to list images and containers.
+- Clean up regularly with `docker system prune`.
+- Use `docker exec` to interact with running containers.
 
 ---
 
