@@ -311,16 +311,16 @@ CMD [ "node", "app.mjs" ]
 - [Running a Container based on your own Image](#running-a-container-based-on-your-image)
 - [Images are Read-Only!](#images-are-read-only)
 - [Understanding Image Layers](#understanding-image-layers)
-- [Managing Images & Containers]()
-- [Stopping & Restarting Containers]()
-- [Understanding Attached & Detached Containers]()
-- [Attaching to an already-running Container]()
-- [Entering Interactive Mode]()
-- [Deleting Images & Containers]()
-- [Removing Stopped Containers Automatically]()
-- [A look behind the scenes: Inspecting Images]()
-- [Copying Files Into & From a container]()
-- [Naming & Tagging Containers and Images]()
+- [Managing Images & Containers](#managing-images--containers)
+- [Stopping & Restarting Containers](#stopping--restarting-containers)
+- [Understanding Attached & Detached Containers](#understanding-attached--detached-containers)
+- [Attaching to an already-running Container](#option-2-attach-to-a-running-container)
+- [Entering Interactive Mode](#entering-interactive-mode)
+- [Deleting Images & Containers](#deleting-images--containers)
+- [Removing Stopped Containers Automatically](#removing-stopped-containers-automatically)
+- [A look behind the scenes: Inspecting Images](#a-look-behind-the-scenes-inspecting-images)
+- [Copying Files Into & From a container](#copying-files-into--from-a-container)
+- [Naming & Tagging Containers and Images](#naming--tagging-containers-and-images)
 - [Sharing Images - Overview]()
 - [Pushing Images to DockerHub]()
 - [Pulling & Using Shared Images]()
@@ -1731,4 +1731,120 @@ To explore the filesystem of an image, you can:
 - Explore the filesystem interactively or by exporting the image.
 
 ---
+
+## Copying Files into & from a container
+
+### 1. **Copying Files into & from a Container**
+
+When working with Docker containers, you often need to copy files between your host machine and the container. Docker provides two main commands for this: `docker cp` and using Docker volumes.
+
+#### **Copying Files into a Container**
+
+To copy a file or directory from your host machine into a running container, you use the `docker cp` command. The syntax is:
+
+```bash
+docker cp <source_path> <container_id>:<destination_path>
+```
+
+- `<source_path>`: The path to the file or directory on your host machine.
+- `<container_id>`: The ID or name of the container.
+- `<destination_path>`: The path inside the container where you want to copy the file or directory.
+
+**Example:**
+
+```bash
+docker cp /home/user/myfile.txt mycontainer:/app/myfile.txt
+```
+
+This command copies `myfile.txt` from your host machine to the `/app` directory inside the container named `mycontainer`.
+
+#### **Copying Files from a Container**
+
+Similarly, you can copy files from a container to your host machine using the same `docker cp` command, but with the source and destination paths reversed:
+
+```bash
+docker cp <container_id>:<source_path> <destination_path>
+```
+
+**Example:**
+
+```bash
+docker cp mycontainer:/app/myfile.txt /home/user/myfile.txt
+```
+
+This command copies `myfile.txt` from the `/app` directory inside the container to your host machine.
+
+#### **Using Docker Volumes**
+
+While `docker cp` is useful for one-off file transfers, Docker volumes are a more robust solution for persistent data storage and sharing files between the host and container. Volumes are managed by Docker and can be mounted to specific paths in the container.
+
+**Example:**
+
+```bash
+docker run -v /home/user/data:/app/data myimage
+```
+
+This command mounts the `/home/user/data` directory on your host machine to `/app/data` inside the container.
+
+## Naming & Tagging Containers and Images
+
+### 2. **Naming & Tagging Containers and Images**
+
+#### **Naming Containers**
+
+When you run a container, Docker assigns it a random name by default. However, you can give your container a custom name using the `--name` option.
+
+**Example:**
+
+```bash
+docker run --name mycontainer myimage
+```
+
+This command runs a container from the `myimage` image and names it `mycontainer`.
+
+#### **Tagging Images**
+
+Docker images can have tags, which are essentially versions or labels for the image. Tags help you manage different versions of an image. When you build or pull an image, you can specify a tag.
+
+**Example:**
+
+```bash
+docker build -t myimage:1.0 .
+```
+
+This command builds an image from the Dockerfile in the current directory and tags it as `myimage:1.0`.
+
+If you don't specify a tag, Docker uses `latest` by default.
+
+**Pulling a Tagged Image:**
+
+```bash
+docker pull myimage:1.0
+```
+
+This command pulls the `myimage` image with the `1.0` tag.
+
+#### **Tagging an Existing Image**
+
+You can also tag an existing image with a new tag using the `docker tag` command.
+
+**Example:**
+
+```bash
+docker tag myimage:1.0 myimage:latest
+```
+
+This command tags the `myimage:1.0` image as `myimage:latest`.
+
+#### **Renaming a Container**
+
+If you want to rename an existing container, you can use the `docker rename` command.
+
+**Example:**
+
+```bash
+docker rename old_container_name new_container_name
+```
+
+This command renames the container from `old_container_name` to `new_container_name`.
 
