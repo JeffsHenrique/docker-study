@@ -13,7 +13,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Docker Setup - Overview](#docker-setup---overview)
 - [An Overview of the Docker Tools](#an-overview-of-the-docker-tools)
 
-## [What Is Docker?](#docker--kubernetes)
+## [What Is Docker?](#section-1---introduction)
 
 **Docker** is a platform that allows you to **create, deploy, and run applications in containers**. Containers are lightweight, portable, and self-sufficient units that package an application along with all its dependencies (like libraries, frameworks, and runtime environments). This ensures that the application runs consistently across different environments (development, testing, production).
 
@@ -34,7 +34,7 @@ If you’re running a Python app, Docker ensures it works the same on your lapto
 
 ---
 
-## [Why Docker & Containers?](#docker--kubernetes)
+## [Why Docker & Containers?](#section-1---introduction)
 
 ### **Why Containers?**
 Containers are a way to **package and isolate applications** with everything they need to run (code, libraries, dependencies, etc.). Here’s why they’re awesome:
@@ -92,7 +92,7 @@ Docker and containers solve the problem of **"it works on my machine"** by makin
 
 ---
 
-## [Virtual Machines vs Docker Containers](#docker--kubernetes)
+## [Virtual Machines vs Docker Containers](#section-1---introduction)
 
 **Virtual Machines (VMs)** and **Docker Containers** are both used to isolate and run applications, but they work very differently. Let’s compare them:
 
@@ -169,7 +169,7 @@ Docker and containers solve the problem of **"it works on my machine"** by makin
 
 ---
 
-## [Docker Setup - Overview](#docker--kubernetes)
+## [Docker Setup - Overview](#section-1---introduction)
 
 Here's the **guidance to install Docker, depending on your OS.**
 
@@ -182,7 +182,7 @@ Easy link to the video: [here](https://www.udemy.com/course/docker-kubernetes-th
 
 There's also a Docker Playground: [here](https://labs.play-with-docker.com/)
 
-## [An Overview of the Docker Tools](#docker--kubernetes)
+## [An Overview of the Docker Tools](#section-1---introduction)
 
 Here’s a quick **overview of Docker tools**—short and sweet! 🚀
 
@@ -322,7 +322,7 @@ CMD [ "node", "app.mjs" ]
 - [Pulling & Using Shared Images]()
 - [Module Summary]()
 
-## [Images & Containers: What and Why](#docker--kubernetes)
+## [Images & Containers: What and Why](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. What is a Docker Image?**
 - A **Docker image** is a **read-only template** that contains everything needed to run an application:
@@ -397,7 +397,7 @@ Imagine you’re building a web app:
 
 ---
 
-## [Using & Running External (Pre-Built) Images](#docker--kubernetes)
+## [Using & Running External (Pre-Built) Images](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. What are Pre-Built Images?**
 - Pre-built images are **ready-to-use Docker images** available in public or private registries (like Docker Hub).
@@ -489,7 +489,7 @@ Imagine you’re building a web app:
 
 ---
 
-## [Building Your Own Image with a Dockerfile](#docker--kubernetes)
+## [Building Your Own Image with a Dockerfile](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. What is a Dockerfile?**
 - A **Dockerfile** is a text file that contains instructions for building a Docker image.
@@ -608,7 +608,7 @@ CMD ["python", "app.py"]
 
 ---
 
-## [Running a Container based on your image](#docker--kubernetes)
+## [Running a Container based on your image](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. Basic Command: `docker run`**
 Use the `docker run` command to start a container from your image:
@@ -716,7 +716,7 @@ Imagine you built a Node.js app image:
 
 ---
 
-## [Images are Read-Only](#docker--kubernetes)
+## [Images are Read-Only](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. What Does "Images are Read-Only" Mean?**
 - A **Docker image** is a **read-only template** used to create containers.
@@ -800,7 +800,7 @@ If you want to save changes:
 
 ---
 
-## [Understanding Image Layers](#docker--kubernetes)
+## [Understanding Image Layers](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. What Are Image Layers?**
 - Docker images are built using **layers**. Each instruction in a `Dockerfile` creates a new layer.
@@ -894,7 +894,7 @@ If you change your app code (Layer 4), Docker will reuse Layers 1-3 from the cac
 
 ---
 
-## [Managing Images & Containers](#docker--kubernetes)
+## [Managing Images & Containers](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. Managing Docker Images**
 #### **List Images**
@@ -1067,7 +1067,7 @@ Imagine you’re running a web app:
 
 ---
 
-## [Stopping & Restarting Containers](#docker--kubernetes)
+## [Stopping & Restarting Containers](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. Stopping Containers**
 When you stop a container, it gracefully shuts down the processes inside it. Here’s how to do it:
@@ -1182,7 +1182,7 @@ docker start <container_id_or_name>
 
 ---
 
-## [Understanding Attached & Detached Containers](#docker--kubernetes)
+## [Understanding Attached & Detached Containers](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. Attached Containers (Foreground Mode)**
 - **What**: When you run a container in **attached mode**, it stays connected to your terminal, and you see its logs/output in real time.
@@ -1292,7 +1292,7 @@ For containers that need input (e.g., a shell):
 
 ---
 
-## [Entering Interactive Mode](#docker--kubernetes)
+## [Entering Interactive Mode](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. What is Interactive Mode?**
 - Interactive mode allows you to **connect to a running container** and interact with it as if you were inside the container itself.
@@ -1408,7 +1408,7 @@ docker exec -it <container_id_or_name> [command]
 
 ---
 
-## [Deleting Images & Containers](#docker--kubernetes)
+## [Deleting Images & Containers](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. Deleting Containers**
 #### **Remove a Single Container**
@@ -1508,7 +1508,7 @@ docker volume prune
 
 ---
 
-## [Removing Stopped Containers Automatically](#docker--kubernetes)
+## [Removing Stopped Containers Automatically](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. Why Automate Removal?**
 - Avoids clutter from stopped containers.
@@ -1597,7 +1597,7 @@ services:
 
 ---
 
-## [A look behind the scenes: Inspecting Images](#docker--kubernetes)
+## [A look behind the scenes: Inspecting Images](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### **1. Why Inspect Images?**
 - Understand the **layers** and **history** of an image.
@@ -1728,7 +1728,7 @@ To explore the filesystem of an image, you can:
 
 ---
 
-## [Copying Files into & from a container](#docker--kubernetes)
+## [Copying Files into & from a container](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### 1. **Copying Files into & from a Container**
 
@@ -1782,7 +1782,7 @@ docker run -v /home/user/data:/app/data myimage
 
 This command mounts the `/home/user/data` directory on your host machine to `/app/data` inside the container.
 
-## [Naming & Tagging Containers and Images](#docker--kubernetes)
+## [Naming & Tagging Containers and Images](#section-2---docker-images--containers-the-core-building-blocks)
 
 ### 2. **Naming & Tagging Containers and Images**
 
