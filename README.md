@@ -4,6 +4,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 
 - [Section 1: INTRODUCTION](#section-1---introduction)
 - [Section 2: DOCKER IMAGES & CONTAINERS: THE CORE BUILDING BLOCKS](#section-2---docker-images--containers-the-core-building-blocks)
+- [Section 3 - MANAGING DATA & WORKING WITH VOLUMES](#section-3---managing-data--working-with-volumes)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -317,10 +318,9 @@ CMD [ "node", "app.mjs" ]
 - [A look behind the scenes: Inspecting Images](#a-look-behind-the-scenes-inspecting-images)
 - [Copying Files Into & From a container](#copying-files-into--from-a-container)
 - [Naming & Tagging Containers and Images](#naming--tagging-containers-and-images)
-- [Sharing Images - Overview]()
-- [Pushing Images to DockerHub]()
-- [Pulling & Using Shared Images]()
-- [Module Summary]()
+- [Sharing Images - Overview](#sharing-images---overview)
+- [Pushing Images to DockerHub](#pushing-images-to-dockerhub)
+- [Pulling & Using Shared Images](#pulling--using-shared-images)
 
 ## [Images & Containers: What and Why](#section-2---docker-images--containers-the-core-building-blocks)
 
@@ -1959,4 +1959,10 @@ This command renames the container from `old_container_name` to `new_container_n
    - Add a `README.md` to your Docker Hub repository to explain how to use the image.
 
 ---
+
+# [Section 3 - MANAGING DATA & WORKING WITH VOLUMES](#docker--kubernetes)
+
+- [Understanding Data Categories / Different Kinds of Data](#understanding-data-categories--different-kinds-of-data)
+
+## [Understanding Data Categories / Different Kinds of Data](#section-3---managing-data--working-with-volumes)
 
