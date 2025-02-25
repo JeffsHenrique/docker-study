@@ -1844,3 +1844,119 @@ docker rename old_container_name new_container_name
 
 This command renames the container from `old_container_name` to `new_container_name`.
 
+## [Sharing Images - Overview](#section-2---docker-images--containers-the-core-building-blocks)
+
+1. **What is an Image?**
+   - A Docker image is a lightweight, standalone, and executable package that includes everything needed to run a piece of software, including the code, runtime, libraries, and dependencies.
+   - Images are built from a `Dockerfile`, which defines the steps to create the image.
+
+2. **Why Share Images?**
+   - **Collaboration**: Share images with team members or the community.
+   - **Consistency**: Ensure everyone uses the same environment.
+   - **Deployment**: Simplify deployment by using pre-built images.
+   - **Reusability**: Avoid rebuilding images from scratch.
+
+3. **Image Repositories**
+   - Docker images are stored in **registries** (e.g., Docker Hub, AWS ECR, Google Container Registry).
+   - **Docker Hub** is the default public registry for sharing Docker images.
+
+4. **Image Tags**
+   - Tags are used to version images (e.g., `myimage:1.0`, `myimage:latest`).
+   - The `latest` tag is applied by default if no tag is specified.
+
+---
+
+## [Pushing Images to DockerHub](#section-2---docker-images--containers-the-core-building-blocks)
+
+1. **Prerequisites**
+   - A Docker Hub account ([hub.docker.com](https://hub.docker.com)).
+   - Docker installed on your machine.
+   - An image built locally (e.g., `myimage:1.0`).
+
+2. **Steps to Push an Image**
+   - **Step 1: Log in to Docker Hub**
+     ```bash
+     docker login
+     ```
+     Enter your Docker Hub username and password when prompted.
+
+   - **Step 2: Tag the Image**
+     - Docker Hub requires images to be tagged with your Docker Hub username.
+     - Format: `docker tag <local-image> <dockerhub-username>/<repository-name>:<tag>`
+     - Example:
+       ```bash
+       docker tag myimage:1.0 mydockerhubusername/myimage:1.0
+       ```
+
+   - **Step 3: Push the Image**
+     - Use the `docker push` command to upload the image to Docker Hub.
+     - Example:
+       ```bash
+       docker push mydockerhubusername/myimage:1.0
+       ```
+
+3. **Verifying the Push**
+   - Visit your Docker Hub account and check the repository to ensure the image has been uploaded.
+
+---
+
+## [Pulling & Using Shared Images](#section-2---docker-images--containers-the-core-building-blocks)
+
+1. **Pulling an Image**
+   - Use the `docker pull` command to download an image from a registry.
+   - Example:
+     ```bash
+     docker pull mydockerhubusername/myimage:1.0
+     ```
+   - If no tag is specified, Docker will pull the `latest` tag by default.
+
+2. **Running a Container from a Pulled Image**
+   - Use the `docker run` command to create and start a container from the pulled image.
+   - Example:
+     ```bash
+     docker run -d --name mycontainer mydockerhubusername/myimage:1.0
+     ```
+   - Flags:
+     - `-d`: Run the container in detached mode (in the background).
+     - `--name`: Assign a name to the container.
+
+3. **Using Public Images**
+   - Public images on Docker Hub can be pulled without authentication.
+   - Example:
+     ```bash
+     docker pull nginx:latest
+     docker run -d --name webserver nginx:latest
+     ```
+
+4. **Updating Images**
+   - To update an image, pull the latest version and restart the container.
+   - Example:
+     ```bash
+     docker pull mydockerhubusername/myimage:2.0
+     docker stop mycontainer
+     docker rm mycontainer
+     docker run -d --name mycontainer mydockerhubusername/myimage:2.0
+     ```
+
+---
+
+### **Best Practices**
+
+1. **Use Semantic Versioning**:
+   - Tag images with meaningful versions (e.g., `1.0`, `1.1`, `2.0`).
+
+2. **Avoid Using `latest` in Production**:
+   - The `latest` tag can lead to inconsistencies. Always specify a version.
+
+3. **Optimize Image Size**:
+   - Use multi-stage builds and minimize layers to reduce image size.
+
+4. **Secure Your Images**:
+   - Use private repositories for sensitive images.
+   - Scan images for vulnerabilities using tools like `docker scan`.
+
+5. **Document Your Images**:
+   - Add a `README.md` to your Docker Hub repository to explain how to use the image.
+
+---
+
