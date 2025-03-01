@@ -5,6 +5,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 1: INTRODUCTION](#section-1---introduction)
 - [Section 2: DOCKER IMAGES & CONTAINERS: THE CORE BUILDING BLOCKS](#section-2---docker-images--containers-the-core-building-blocks)
 - [Section 3 - MANAGING DATA & WORKING WITH VOLUMES](#section-3---managing-data--working-with-volumes)
+- [Section 4 - NETWORKING: (CROSS-)CONTAINER COMMUNICATION](#section-4---networking-cross-container-communication)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -1967,6 +1968,14 @@ This command renames the container from `old_container_name` to `new_container_n
 - [Volumes: Named and Anonymous / Bind Mounts](#volumes-named-and-anonymous--bind-mounts)
 - [Bind Mounts: Shortcuts](#bind-mounts-shortcuts)
 - [Combining & Merging Different Volumes](#combining--merging-different-volumes)
+- [A Look at Read-Only Volumes](#a-look-at-read-only-volumes)
+- [Managing Docker Volumes](#managing-docker-volumes)
+- [Using "COPY" vs Bind Mounts](#using-copy-vs-bind-mounts)
+- [Don't COPY everything: Using "dockerignore" Files](#dont-copy-everything-using-dockerignore-files)
+- [Adding more to the .dockerignore File](#adding-more-to-the-dockerignore-file)
+- [Working with Environment Variables & ".env" Files](#working-with-environment-variables--env-files)
+- [Environment Variables & Security](#environment-variables--security)
+- [Using Build Arguments (ARG)](#using-build-arguments-arg)
 
 ## [Understanding Data Categories / Different Kinds of Data](#section-3---managing-data--working-with-volumes)
 
@@ -2475,4 +2484,273 @@ Imagine you have a web application that requires:
 You can combine these into a single directory structure inside the container using the techniques described above.
 
 ---
+
+## [A Look at Read-Only Volumes](#section-3---managing-data--working-with-volumes)
+
+- **Purpose**: Read-only volumes are used to ensure that the container can only read data from the volume and cannot modify it. This is particularly useful for scenarios where data integrity is critical, such as configuration files, shared libraries, or static assets.
+- **Usage**: You can create a read-only volume by appending the `:ro` flag to the volume mount command.
+- **Example**:
+  ```bash
+  docker run -v /host/config:/container/config:ro my-image
+  ```
+  In this example:
+  - `/host/config` is the directory on the host machine.
+  - `/container/config` is the directory inside the container.
+  - The `:ro` flag makes the volume read-only, so the container cannot write to `/container/config`.
+
+---
+
+## [Managing Docker Volumes](#section-3---managing-data--working-with-volumes)
+
+- **Purpose**: Docker volumes are used to persist data outside of containers, ensuring that data is not lost when containers are stopped or removed. Volumes are managed by Docker and can be shared among multiple containers.
+- **Commands**:
+  - **Create a volume**: `docker volume create my-volume`
+    - Creates a new volume named `my-volume`.
+  - **List volumes**: `docker volume ls`
+    - Lists all volumes on the Docker host.
+  - **Inspect a volume**: `docker volume inspect my-volume`
+    - Provides detailed information about the volume, including its mount point on the host.
+  - **Remove a volume**: `docker volume rm my-volume`
+    - Deletes the specified volume.
+  - **Prune unused volumes**: `docker volume prune`
+    - Removes all unused volumes to free up space.
+- **Example**:
+  ```bash
+  docker run -d --name my-container -v my-volume:/app/data my-image
+  ```
+  - This command mounts the `my-volume` volume to `/app/data` in the container.
+  - Data written to `/app/data` will persist even if the container is removed.
+
+---
+
+## [Using "COPY" vs Bind Mounts](#section-3---managing-data--working-with-volumes)
+
+- **COPY**:
+  - **Purpose**: The `COPY` instruction in a Dockerfile is used to copy files or directories from the host machine into the Docker image during the build process. This is ideal for static files that are part of the application, such as code, configuration files, or assets.
+  - **Example**:
+    ```Dockerfile
+    COPY ./src /app/src
+    ```
+    - This copies the `./src` directory on the host to `/app/src` in the image.
+    - The files become part of the image and are immutable once the image is built.
+
+- **Bind Mounts**:
+  - **Purpose**: Bind mounts are used to link a directory or file from the host machine to the container at runtime. This is useful for development, where you want to sync changes between the host and container without rebuilding the image.
+  - **Example**:
+    ```bash
+    docker run -v /host/app:/container/app my-image
+    ```
+    - This mounts `/host/app` on the host to `/container/app` in the container.
+    - Changes made on the host are immediately reflected in the container, and vice versa.
+
+---
+
+## [Don't COPY everything: Using "dockerignore" Files](#section-3---managing-data--working-with-volumes)
+
+- **Purpose**: The `.dockerignore` file prevents unnecessary files from being copied into the Docker image during the build process. This reduces the image size and speeds up the build process.
+- **Example**:
+  ```.dockerignore
+  node_modules
+  .git
+  *.log
+  ```
+  - This ignores the `node_modules` directory, `.git` folder, and all `.log` files.
+  - These files are not copied into the image, even if they exist in the build context.
+
+---
+
+## [Adding more to the .dockerignore File](#section-3---managing-data--working-with-volumes)
+
+- **Purpose**: You can add more patterns to the `.dockerignore` file to exclude additional files or directories. This is useful for excluding temporary files, logs, or other non-essential files.
+- **Example**:
+  ```.dockerignore
+  # Ignore all temporary files
+  tmp/*
+  
+  # Ignore specific file types
+  *.md
+  *.txt
+  
+  # Ignore a specific directory
+  tests/
+  ```
+  - This ensures that temporary files, markdown files, text files, and the `tests/` directory are not copied into the image.
+
+---
+
+## [Working with Environment Variables & ".env" Files](#section-3---managing-data--working-with-volumes)
+
+- **Purpose**: Environment variables are used to configure container behavior without modifying the Docker image. The `.env` file is a convenient way to define these variables in a single location.
+- **Example**:
+  ```.env
+  DB_HOST=localhost
+  DB_USER=admin
+  DB_PASS=password
+  ```
+  - You can use these variables in your Dockerfile or during container runtime:
+    ```bash
+    docker run --env-file .env my-image
+    ```
+  - The container will have access to `DB_HOST`, `DB_USER`, and `DB_PASS` as environment variables.
+
+---
+
+## [Environment Variables & Security](#section-3---managing-data--working-with-volumes)
+
+- **Purpose**: Environment variables can contain sensitive information (e.g., passwords, API keys). It's important to handle them securely to avoid exposing sensitive data.
+- **Best Practices**:
+  - **Avoid hardcoding sensitive data in Dockerfiles**: Use `.env` files or Docker secrets instead.
+  - **Use `.env` files securely**: Ensure `.env` files are not committed to version control by adding them to `.gitignore`.
+  - **Use Docker secrets for production**: Docker secrets provide a secure way to manage sensitive data.
+- **Example**:
+  ```bash
+  docker run -e DB_PASSWORD=secret my-image
+  ```
+  - This sets the `DB_PASSWORD` environment variable securely.
+  - Avoid using this method in production; instead, use Docker secrets or a secrets management tool.
+
+---
+
+## [Using Build Arguments (ARG)](#section-3---managing-data--working-with-volumes)
+
+- **Purpose**: Build arguments (`ARG`) allow you to pass variables during the image build process. These variables are not available in the final image or at runtime, making them ideal for build-time configuration.
+- **Example**:
+  ```Dockerfile
+  ARG APP_VERSION=1.0
+  ENV APP_VERSION=${APP_VERSION}
+  ```
+  - This sets a default value for `APP_VERSION` as `1.0`.
+  - You can override the default value during the build:
+    ```bash
+    docker build --build-arg APP_VERSION=2.0 -t my-image .
+    ```
+  - The `APP_VERSION` environment variable in the container will be set to `2.0`.
+
+---
+
+# [Section 4 - NETWORKING: (CROSS-)CONTAINER COMMUNICATION](#docker--kubernetes)
+
+- [Container to WWW Communication](#container-to-www-communication)
+- [Container to Local Host Machine Communication](#container-to-local-host-machine-communication)
+- [Container to Container Communication](#container-to-container-communication)
+- [Introducing Docker Networks: Elegant Container to Container Communication](#introducing-docker-networks-elegant-container-to-container-communication)
+- [How Docker Resolves IP Addresses](#how-docker-resolves-ip-addresses)
+- [Docker Network Drivers](#docker-network-drivers)
+
+## Module Introduction
+
+### Introduction to Networking in Docker
+Networking is a fundamental aspect of Docker that enables containers to communicate with each other, with the host system, and with external networks. In this section, you'll learn how Docker handles networking and how to configure it for various use cases, such as:
+
+1. **Container-to-Container Communication**: How containers within the same Docker network can talk to each other.
+2. **Container-to-Host Communication**: How containers can communicate with services running on the host machine.
+3. **Container-to-External Communication**: How containers can access external networks (e.g., the internet) and how external systems can access services running inside containers.
+4. **Cross-Container Communication**: How containers running on different hosts or in different environments can communicate securely.
+
+---
+
+### Why Networking Matters in Docker
+- **Isolation**: By default, containers are isolated from each other. Networking allows you to control how and when containers interact.
+- **Scalability**: Networking enables you to scale applications by running multiple containers and distributing traffic among them.
+- **Microservices Architecture**: In modern applications, services are often broken into smaller, independent components (microservices). Networking allows these components to communicate seamlessly.
+- **Security**: Properly configured networks ensure that only authorized containers can communicate with each other, reducing the risk of unauthorized access.
+
+---
+
+### Key Concepts in Docker Networking
+1. **Docker Network Drivers**:
+   Docker provides several network drivers to support different use cases:
+   - **Bridge**: The default network driver. It creates an internal network for containers on the same host.
+   - **Host**: Removes network isolation between the container and the host, allowing the container to use the host's network directly.
+   - **Overlay**: Enables communication between containers running on different Docker hosts (e.g., in a Docker Swarm or Kubernetes cluster).
+   - **Macvlan**: Assigns a MAC address to each container, making it appear as a physical device on the network.
+   - **None**: Disables networking for the container.
+
+2. **Container Networking Model (CNM)**:
+   Docker uses the CNM to manage networking. It consists of three main components:
+   - **Sandbox**: An isolated network stack for a container (includes interfaces, routing tables, and DNS settings).
+   - **Endpoint**: A connection point that links a sandbox to a network.
+   - **Network**: A group of endpoints that can communicate with each other.
+
+3. **DNS Resolution**:
+   Docker provides built-in DNS resolution for containers on the same network. Containers can communicate using their container names instead of IP addresses.
+
+4. **Port Mapping**:
+   Containers can expose ports to the host or external networks, allowing external systems to access services running inside the container.
+
+---
+
+### What You'll Learn in This Section
+- **Creating and Managing Docker Networks**: How to create custom networks and connect containers to them.
+- **Container-to-Container Communication**: How to enable communication between containers on the same network.
+- **Cross-Container Communication**: How to connect containers running on different hosts or in different environments.
+- **Exposing Container Ports**: How to map container ports to the host or external networks.
+- **Using Docker Compose for Networking**: How to define and manage networks in multi-container applications using Docker Compose.
+- **Advanced Networking Scenarios**: How to configure overlay networks, use Macvlan, and secure container communication.
+
+---
+
+### Real-World Use Cases
+1. **Microservices Communication**:
+   - Multiple containers (e.g., a frontend, backend, and database) need to communicate with each other.
+   - Docker networks allow them to interact securely and efficiently.
+
+2. **Load Balancing**:
+   - Multiple instances of a service can run behind a load balancer, distributing traffic across containers.
+
+3. **Multi-Host Applications**:
+   - In a Docker Swarm or Kubernetes cluster, containers running on different hosts need to communicate using overlay networks.
+
+4. **Development and Testing**:
+   - Networking allows you to simulate production environments locally, enabling easier debugging and testing.
+
+---
+
+### Example: Basic Container Communication
+Let's say you have two containers: a web server (`web`) and a database (`db`). You want the web server to communicate with the database.
+
+1. **Create a custom network**:
+   ```bash
+   docker network create my-network
+   ```
+
+2. **Run the database container**:
+   ```bash
+   docker run -d --name db --network my-network my-database-image
+   ```
+
+3. **Run the web server container**:
+   ```bash
+   docker run -d --name web --network my-network -p 80:80 my-web-image
+   ```
+
+4. **Communication**:
+   - The `web` container can connect to the `db` container using the hostname `db`.
+   - For example, the web server can connect to the database using the connection string `db:3306`.
+
+---
+
+## [Container to WWW Communication](#section-4---networking-cross-container-communication)
+
+
+
+## [Container to Local Host Machine Communication](#section-4---networking-cross-container-communication)
+
+
+
+## [Container to Container Communication](#section-4---networking-cross-container-communication)
+
+
+
+## [Introducing Docker Networks: Elegant Container to Container Communication](#section-4---networking-cross-container-communication)
+
+
+
+## [How Docker Resolves IP Addresses](#section-4---networking-cross-container-communication)
+
+
+
+## [Docker Network Drivers](#section-4---networking-cross-container-communication)
+
+
 
