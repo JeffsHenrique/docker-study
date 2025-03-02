@@ -2732,25 +2732,153 @@ Let's say you have two containers: a web server (`web`) and a database (`db`). Y
 
 ## [Container to WWW Communication](#section-4---networking-cross-container-communication)
 
+### Explanation:
+Containers can communicate with the outside world (e.g., the internet) by default. Docker uses the host machine's network interface to allow containers to access external resources. This is facilitated by Docker's default bridge network.
 
+### Example:
+If you run a container and it tries to access a website (e.g., `curl https://www.google.com`), Docker will route the request through the host machine's network interface.
+
+```bash
+docker run alpine ping google.com
+```
+
+This command will start an Alpine Linux container and ping `google.com`. The container uses the host's network to reach the internet.
+
+---
 
 ## [Container to Local Host Machine Communication](#section-4---networking-cross-container-communication)
 
+### Explanation:
+Containers can communicate with the local host machine using the special DNS name `host.docker.internal`. This is particularly useful for accessing services running on the host machine, such as databases or APIs.
 
+### Example:
+If you have a web server running on your host machine at `localhost:8080`, a container can access it using `host.docker.internal:8080`.
+
+```bash
+docker run alpine curl http://host.docker.internal:8080
+```
+
+This command will start an Alpine Linux container and make an HTTP request to the web server running on the host machine.
+
+---
 
 ## [Container to Container Communication](#section-4---networking-cross-container-communication)
 
+### Explanation:
+Containers can communicate with each other directly. By default, Docker assigns each container an IP address on the `bridge` network. Containers can use these IP addresses to communicate with each other.
 
+### Example:
+Start two containers and have one ping the other using its IP address.
+
+```bash
+# Start the first container
+docker run -d --name container1 alpine sleep 1000
+
+# Get the IP address of container1
+CONTAINER1_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container1)
+
+# Start the second container and ping container1
+docker run alpine ping $CONTAINER1_IP
+```
+
+This will start two containers, and the second container will ping the first one using its IP address.
+
+---
 
 ## [Introducing Docker Networks: Elegant Container to Container Communication](#section-4---networking-cross-container-communication)
 
+### Explanation:
+Docker provides a more elegant way to handle container-to-container communication through **user-defined networks**. When containers are connected to the same user-defined network, they can communicate with each other using their container names as hostnames.
 
+### Example:
+Create a custom network and connect two containers to it.
+
+```bash
+# Create a custom network
+docker network create my_network
+
+# Start two containers connected to the custom network
+docker run -d --name container1 --network my_network alpine sleep 1000
+docker run -d --name container2 --network my_network alpine sleep 1000
+
+# Ping container1 from container2 using its name
+docker exec container2 ping container1
+```
+
+In this example, `container2` can ping `container1` using the hostname `container1` because they are on the same custom network.
+
+---
 
 ## [How Docker Resolves IP Addresses](#section-4---networking-cross-container-communication)
 
+### Explanation:
+Docker uses an embedded DNS server to resolve container names to IP addresses within user-defined networks. When containers are connected to the same network, they can communicate using their container names instead of IP addresses.
 
+### Example:
+When you create a custom network and connect containers to it, Docker automatically handles DNS resolution.
+
+```bash
+# Create a custom network
+docker network create my_network
+
+# Start two containers connected to the custom network
+docker run -d --name container1 --network my_network alpine sleep 1000
+docker run -d --name container2 --network my_network alpine sleep 1000
+
+# Ping container1 from container2 using its name
+docker exec container2 ping container1
+```
+
+Here, Docker resolves `container1` to its IP address automatically.
+
+---
 
 ## [Docker Network Drivers](#section-4---networking-cross-container-communication)
 
+### Explanation:
+Docker provides several network drivers to manage how containers communicate with each other and the outside world. The most common drivers are:
 
+1. **Bridge**: The default network driver. Containers on the same bridge network can communicate with each other using IP addresses or container names.
+2. **Host**: Removes network isolation between the container and the host. The container uses the host's network directly.
+3. **Overlay**: Used for multi-host communication in Docker Swarm. Allows containers on different hosts to communicate.
+4. **Macvlan**: Assigns a MAC address to each container, making it appear as a physical device on the network.
+5. **None**: Disables all networking for the container.
+
+### Example:
+Using the `host` network driver.
+
+```bash
+docker run --network host alpine ifconfig
+```
+
+This command will start an Alpine container using the host's network stack, and the `ifconfig` command will show the host's network interfaces.
+
+### Instructor Notes:
+
+Docker Networks actually support different kinds of **"Drivers"** which influence the behavior of the Network.
+
+The default driver is the **"bridge"** driver - it provides the behavior shown in this module (i.e. Containers can find each other by name if they are in the same Network).
+
+The driver can be set when a Network is created, simply by adding the `--driver` option.
+```bash
+docker network create --driver bridge my-net
+```
+
+_Of course, if you want to use the "bridge" driver, you can simply omit the entire option since "bridge" is the default anyways._
+
+Docker also supports these alternative drivers - though you will use the "bridge" driver in most cases:
+
+1. **host**: For standalone containers, isolation between container and host system is removed (i.e. they share localhost as a network)
+
+2. **overlay**: Multiple Docker daemons (i.e. Docker running on different machines) are able to connect with each other. Only works in "Swarm" mode which is a dated / almost deprecated way of connecting multiple containers
+
+3. **macvlan**: You can set a custom MAC address to a container - this address can then be used for communication with that container
+
+4. **none**: All networking is disabled.
+
+5. **Third-party plugins**: You can install third-party plugins which then may add all kinds of behaviors and functionalities
+
+As mentioned, the **"bridge"** driver makes most sense in the vast majority of scenarios.
+
+---
 
