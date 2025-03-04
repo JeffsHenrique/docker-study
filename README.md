@@ -4,8 +4,9 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 
 - [Section 1: INTRODUCTION](#section-1---introduction)
 - [Section 2: DOCKER IMAGES & CONTAINERS: THE CORE BUILDING BLOCKS](#section-2---docker-images--containers-the-core-building-blocks)
-- [Section 3 - MANAGING DATA & WORKING WITH VOLUMES](#section-3---managing-data--working-with-volumes)
-- [Section 4 - NETWORKING: (CROSS-)CONTAINER COMMUNICATION](#section-4---networking-cross-container-communication)
+- [Section 3: MANAGING DATA & WORKING WITH VOLUMES](#section-3---managing-data--working-with-volumes)
+- [Section 4: NETWORKING: (CROSS-)CONTAINER COMMUNICATION](#section-4---networking-cross-container-communication)
+- [Section 5: BUILDING MULTI-CONTAINER APPLICATIONS WITH DOCKER](#section-5---building-multi-container-applications-with-docker)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -2879,6 +2880,377 @@ Docker also supports these alternative drivers - though you will use the "bridge
 5. **Third-party plugins**: You can install third-party plugins which then may add all kinds of behaviors and functionalities
 
 As mentioned, the **"bridge"** driver makes most sense in the vast majority of scenarios.
+
+---
+
+# [Section 5 - BUILDING MULTI-CONTAINER APPLICATIONS WITH DOCKER](#docker--kubernetes)
+
+- [Our Target App & Setup](#our-target-app--setup)
+- [Dockerizing the MongoDB Service](#dockerizing-the-mongodb-service)
+- [Dockerizing the Node App](#dockerizing-the-node-app)
+- [Moving the React SPA into a Container](#moving-the-react-spa-into-a-container)
+- [Adding Docker Networks for Efficient Cross-Container Communication](#adding-docker-networks-for-efficient-cross-container-communication)
+- [Fixing MongoDB Authentication Errors (relevant for next lecture)](#fixing-mongodb-authentication-errors)
+- [Adding Data Persistence to MongoDB with Volumes](#adding-data-persistence-to-mongodb-with-volumes)
+- [Volumes, Bind Mounts & Polishing for the NodeJS Container](#volumes-bind-mounts--polishing-for-the-nodejs-container)
+- [Live Source Code Updates for the React Container (with Bind Mounts)](#live-source-code-updates-for-the-react-container-with-bind-mounts)
+
+## Module Introduction
+
+In modern application development, it's common to build applications that consist of multiple services or components. For example, a web application might have a frontend, a backend, a database, and a caching layer. Each of these components can be run in separate containers, allowing for better scalability, isolation, and maintainability.
+
+Docker is a powerful tool for containerizing applications, but when working with multi-container applications, managing these containers individually can become complex. This module focuses on **orchestrating multi-container applications** using Docker tools and best practices. You'll learn how to define, manage, and scale multi-container applications effectively.
+
+---
+
+### Why Multi-Container Applications?
+
+#### Benefits of Multi-Container Applications
+
+1. **Modularity**: Each service can be developed, deployed, and scaled independently.
+2. **Isolation**: Containers isolate services, reducing the risk of conflicts between dependencies.
+3. **Scalability**: Individual services can be scaled horizontally to handle increased traffic.
+4. **Portability**: Docker containers can run on any system that supports Docker, ensuring consistency across environments.
+
+#### Challenges of Multi-Container Applications
+
+While multi-container applications offer many benefits, they also introduce complexity:
+
+1. **Coordination**: Ensuring all containers start and stop in the correct order.
+2. **Networking**: Configuring communication between containers.
+3. **Data Persistence**: Managing data for stateful services like databases.
+4. **Scalability**: Scaling individual services without disrupting the application.
+
+---
+
+### Example: A Typical Multi-Container Application
+
+Consider a web application with the following components:
+
+1. **Frontend**: A React application served by an Nginx web server.
+2. **Backend**: A Node.js API that handles business logic.
+3. **Database**: A PostgreSQL database for storing application data.
+4. **Cache**: A Redis instance for caching frequently accessed data.
+
+Each of these components can be run in a separate container. Docker allows you to define how these containers interact with each other, ensuring the application works as a cohesive unit.
+
+---
+
+### The Need for Orchestration Tools
+
+Managing multi-container applications manually can be tedious and error-prone. For example:
+
+- Starting each container individually with the correct configuration.
+- Ensuring containers are connected to the same network.
+- Managing dependencies between services (e.g., the backend depends on the database).
+
+This is where **orchestration tools** like Docker Compose come in. Docker Compose simplifies the process of defining, running, and managing multi-container applications by using a single configuration file.
+
+---
+
+### What You'll Learn in This Section
+
+In this section, you'll learn:
+
+1. **The Basics of Multi-Container Applications**: How to break down an application into multiple services and run them in separate containers.
+2. **Manual Multi-Container Setup**: How to manually create and connect containers using Docker commands.
+3. **Challenges of Manual Setup**: The limitations of managing multi-container applications without orchestration tools.
+4. **Introduction to Docker Compose**: A brief overview of Docker Compose and how it solves the challenges of manual container management.
+
+---
+
+### Hands-On Example: Manual Multi-Container Setup
+
+To understand the challenges of managing multi-container applications, let's manually set up a simple application with two services:
+
+1. **Web Server**: An Nginx container serving a static website.
+2. **Database**: A PostgreSQL container for storing data.
+
+#### Steps:
+
+1. **Create a Network**:
+   ```bash
+   docker network create myapp-network
+   ```
+
+2. **Run the Database Container**:
+   ```bash
+   docker run -d \
+     --name myapp-db \
+     --network myapp-network \
+     -e POSTGRES_USER=user \
+     -e POSTGRES_PASSWORD=password \
+     postgres:13
+   ```
+
+3. **Run the Web Server Container**:
+   ```bash
+   docker run -d \
+     --name myapp-web \
+     --network myapp-network \
+     -p 80:80 \
+     nginx:latest
+   ```
+
+#### Challenges:
+
+- **Dependency Management**: If the web server depends on the database, you need to ensure the database starts first.
+- **Networking**: You must manually create and connect containers to the same network.
+- **Scalability**: Scaling services manually is time-consuming and error-prone.
+
+---
+
+### Conclusion
+
+This section introduced the concept of multi-container applications and highlighted the challenges of managing them manually. In the next section, you'll learn how **Docker Compose** simplifies this process by allowing you to define and run multi-container applications with a single configuration file.
+
+---
+
+Absolutely! Below are detailed notes for each of the topics in the section. I'll use a simple Node.js app as the example, which includes a React frontend, a Node.js backend, and a MongoDB database. These notes are structured for clarity and can be saved in a `.md` file for your Git repository.
+
+---
+
+## [Our Target App & Setup](#section-5---building-multi-container-applications-with-docker)
+
+### Overview
+The target application is a simple **To-Do List** app with the following components:
+1. **Frontend**: A React Single Page Application (SPA) for the user interface.
+2. **Backend**: A Node.js API for handling CRUD operations.
+3. **Database**: A MongoDB instance for storing to-do items.
+
+### Directory Structure
+```
+todo-app/
+├── frontend/          # React SPA
+├── backend/           # Node.js API
+├── docker-compose.yml # Docker Compose configuration
+└── README.md
+```
+
+---
+
+## [Dockerizing the MongoDB Service](#section-5---building-multi-container-applications-with-docker)
+
+### Steps to Dockerize MongoDB
+1. Create a `Dockerfile` for MongoDB (optional, as we'll use the official image).
+2. Use the official MongoDB image in the `docker-compose.yml` file.
+
+### Example `docker-compose.yml` for MongoDB:
+```yaml
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: todo-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
+```
+
+### Key Points:
+- **Ports**: Expose MongoDB on port `27017`.
+- **Environment Variables**: Set up authentication for MongoDB.
+- **Volumes**: Use a named volume (`mongodb_data`) for data persistence.
+
+---
+
+## [Dockerizing the Node App](#section-5---building-multi-container-applications-with-docker)
+
+### Steps to Dockerize the Node.js Backend
+1. Create a `Dockerfile` in the `backend/` directory.
+2. Use a multi-stage build to optimize the image size.
+
+### Example `Dockerfile` for Node.js:
+```dockerfile
+# Stage 1: Build
+FROM node:16 AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2: Run
+FROM node:16-alpine
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### Example `docker-compose.yml` Addition:
+```yaml
+backend:
+  build: ./backend
+  container_name: todo-backend
+  ports:
+    - "3000:3000"
+  environment:
+    - MONGO_URI=mongodb://admin:password@mongodb:27017/todo?authSource=admin
+  depends_on:
+    - mongodb
+```
+
+### Key Points:
+- **Dependencies**: The backend depends on MongoDB.
+- **Environment Variables**: Pass the MongoDB connection string.
+
+---
+
+## [Moving the React SPA into a Container](#section-5---building-multi-container-applications-with-docker)
+
+### Steps to Dockerize the React Frontend
+1. Create a `Dockerfile` in the `frontend/` directory.
+2. Use a multi-stage build for optimization.
+
+### Example `Dockerfile` for React:
+```dockerfile
+# Stage 1: Build
+FROM node:16 AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### Example `docker-compose.yml` Addition:
+```yaml
+frontend:
+  build: ./frontend
+  container_name: todo-frontend
+  ports:
+    - "80:80"
+  depends_on:
+    - backend
+```
+
+### Key Points:
+- **Static Files**: Serve the built React app using Nginx.
+- **Dependencies**: The frontend depends on the backend.
+
+---
+
+## [Adding Docker Networks for Efficient Cross-Container Communication](#section-5---building-multi-container-applications-with-docker)
+
+### Why Use Docker Networks?
+- Containers can communicate with each other using service names as hostnames.
+- Isolates the application from other Docker networks.
+
+### Example `docker-compose.yml` Network Configuration:
+```yaml
+networks:
+  todo-network:
+    driver: bridge
+
+services:
+  mongodb:
+    networks:
+      - todo-network
+  backend:
+    networks:
+      - todo-network
+  frontend:
+    networks:
+      - todo-network
+```
+
+### Key Points:
+- **Service Discovery**: Use `mongodb`, `backend`, and `frontend` as hostnames.
+- **Isolation**: The `todo-network` isolates the app from other Docker networks.
+
+---
+
+## [Fixing MongoDB Authentication Errors](#section-5---building-multi-container-applications-with-docker)
+
+### Common Issues
+- Incorrect connection strings.
+- Missing or incorrect environment variables.
+
+### Solution
+Ensure the connection string in the backend matches the MongoDB credentials:
+```yaml
+environment:
+  - MONGO_URI=mongodb://admin:password@mongodb:27017/todo?authSource=admin
+```
+
+---
+
+## [Adding Data Persistence to MongoDB with Volumes](#section-5---building-multi-container-applications-with-docker)
+
+### Why Use Volumes?
+- Prevents data loss when containers are restarted or removed.
+
+### Example Volume Configuration:
+```yaml
+volumes:
+  mongodb_data:
+```
+
+### Key Points:
+- **Named Volume**: Use `mongodb_data` to persist MongoDB data.
+- **Data Location**: Data is stored in `/data/db` inside the container.
+
+---
+
+## [Volumes, Bind Mounts & Polishing for the NodeJS Container](#section-5---building-multi-container-applications-with-docker)
+
+### Bind Mounts for Development
+- Use bind mounts to sync local files with the container for live updates.
+
+### Example `docker-compose.yml` Addition:
+```yaml
+backend:
+  volumes:
+    - ./backend:/app
+    - /app/node_modules
+```
+
+### Key Points:
+- **Development Workflow**: Changes to local files are reflected in the container.
+- **Node Modules**: Exclude `node_modules` from the bind mount to avoid conflicts.
+
+---
+
+## [Live Source Code Updates for the React Container (with Bind Mounts)](#section-5---building-multi-container-applications-with-docker)
+
+### Bind Mounts for React Development
+- Use bind mounts to enable live updates during development.
+
+### Example `docker-compose.yml` Addition:
+```yaml
+frontend:
+  volumes:
+    - ./frontend:/app
+    - /app/node_modules
+```
+
+### Key Points:
+- **Hot Reloading**: Changes to React code are reflected immediately.
+- **Node Modules**: Exclude `node_modules` to avoid conflicts.
+
+---
+
+## [Module Summary](#section-5---building-multi-container-applications-with-docker)
+
+This section walked you through the process of building a multi-container application using Docker. You learned how to:
+1. Dockerize each component (MongoDB, Node.js, React).
+2. Use Docker networks for cross-container communication.
+3. Add data persistence with volumes.
+4. Enable live updates with bind mounts.
 
 ---
 
