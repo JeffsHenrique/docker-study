@@ -7,6 +7,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 3: MANAGING DATA & WORKING WITH VOLUMES](#section-3---managing-data--working-with-volumes)
 - [Section 4: NETWORKING: (CROSS-)CONTAINER COMMUNICATION](#section-4---networking-cross-container-communication)
 - [Section 5: BUILDING MULTI-CONTAINER APPLICATIONS WITH DOCKER](#section-5---building-multi-container-applications-with-docker)
+- [Section 6: DOCKER COMPOSE: ELEGANT MULTI-CONTAINER ORCHESTRATION](#section-6---docker-compose-elegant-multi-container-orchestration)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -3254,3 +3255,234 @@ This section walked you through the process of building a multi-container applic
 
 ---
 
+# [Section 6 - DOCKER COMPOSE: ELEGANT MULTI-CONTAINER ORCHESTRATION](#docker--kubernetes)
+
+- [Docker-Compose: What & Why?](#docker-compose-what--why)
+- [Creating a Compose File](#creating-a-compose-file)
+- [Diving into the Compose File Configuration](#diving-into-the-compose-file-configuration)
+- [Installing Docker Compose on Linux](#installing-docker-compose-on-linux)
+- [Docker Compose Up & Down](#docker-compose-up--down)
+- [Working with Multiple Containers](#working-with-multiple-containers)
+- [Adding Another Container](#adding-another-container)
+- [Building Images & Understanding Container Names](#building-images--understanding-container-names)
+- [Module Summary](#module-summary-1)
+
+## Module Introduction
+
+Docker Compose is a powerful tool that simplifies the process of managing multi-container Docker applications. While Docker itself is excellent for running individual containers, real-world applications often require multiple services (e.g., a web server, a database, and a cache) to work together. Docker Compose allows you to define and manage these services in a single, easy-to-read configuration file. This module will guide you through the fundamentals of Docker Compose, from understanding its purpose to creating and managing multi-container applications.
+
+By the end of this module, you will:
+- Understand the purpose and benefits of Docker Compose.
+- Learn how to create and configure a `docker-compose.yml` file.
+- Install Docker Compose on Linux.
+- Use Docker Compose commands to manage your application lifecycle.
+- Work with multiple containers and understand how they interact.
+- Build custom images and manage container naming.
+
+Let’s dive into the topics!
+
+---
+
+## [Docker-Compose: What & Why?](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### What is Docker Compose?
+Docker Compose is a tool for defining and running multi-container Docker applications. It uses a YAML file (`docker-compose.yml`) to configure the application's services, networks, and volumes. With a single command, you can spin up all the services defined in the file.
+
+### Why Use Docker Compose?
+- **Simplifies Multi-Container Management**: Instead of running multiple `docker run` commands, you can start all services with `docker-compose up`.
+- **Reproducibility**: The `docker-compose.yml` file ensures that the same setup can be replicated across different environments.
+- **Isolation**: Each service runs in its own container, ensuring isolation and reducing conflicts.
+- **Networking**: Docker Compose automatically sets up a network for your services, allowing them to communicate seamlessly.
+
+### Example Use Case
+Imagine you have a web application that requires:
+- A web server (e.g., Nginx)
+- A backend API (e.g., Node.js)
+- A database (e.g., PostgreSQL)
+
+Instead of manually starting each container and linking them, Docker Compose allows you to define all these services in a single file and start them together.
+
+---
+
+## [Creating a Compose File](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### What is a Compose File?
+A `docker-compose.yml` file is a YAML file that defines the services, networks, and volumes for your application. It is the heart of Docker Compose.
+
+### Basic Structure
+```yaml
+version: '3.8'  # Specifies the Docker Compose file version
+services:       # Defines the services (containers) in your application
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: example
+```
+
+### Key Points:
+- `version`: Specifies the Docker Compose file format version.
+- `services`: Lists the services (containers) in your application.
+- Each service can specify an `image`, `ports`, `environment` variables, and more.
+
+---
+
+## [Diving into the Compose File Configuration](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### Common Configuration Options
+- **image**: Specifies the Docker image to use.
+- **ports**: Maps container ports to host ports (e.g., `"80:80"`).
+- **environment**: Sets environment variables for the container.
+- **volumes**: Mounts directories or files from the host to the container.
+- **networks**: Connects the service to a custom network.
+- **depends_on**: Specifies dependencies between services.
+
+### Example
+```yaml
+version: '3.8'
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./html:/usr/share/nginx/html
+    depends_on:
+      - db
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: example
+```
+
+---
+
+## [Installing Docker Compose on Linux](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### Steps to Install Docker Compose on Linux
+1. Download the Docker Compose binary:
+   ```bash
+   sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   ```
+2. Apply executable permissions:
+   ```bash
+   sudo chmod +x /usr/local/bin/docker-compose
+   ```
+3. Verify the installation:
+   ```bash
+   docker-compose --version
+   ```
+
+---
+
+## [Docker Compose Up & Down](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### Starting Services
+Use the `docker-compose up` command to start all services defined in the `docker-compose.yml` file:
+```bash
+docker-compose up
+```
+- Add the `-d` flag to run in detached mode:
+  ```bash
+  docker-compose up -d
+  ```
+
+### Stopping Services
+Use the `docker-compose down` command to stop and remove all containers, networks, and volumes:
+```bash
+docker-compose down
+```
+
+---
+
+## [Working with Multiple Containers](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### Multi-Container Example
+```yaml
+version: '3.8'
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+  api:
+    image: my-node-app:latest
+    ports:
+      - "3000:3000"
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: example
+```
+
+### Key Points:
+- Each service runs in its own container.
+- Services can communicate with each other using the service name as the hostname (e.g., `db`).
+
+---
+
+## [Adding Another Container](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### Adding a Redis Container
+```yaml
+version: '3.8'
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+  api:
+    image: my-node-app:latest
+    ports:
+      - "3000:3000"
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: example
+  cache:
+    image: redis:latest
+```
+
+---
+
+## [Building Images & Understanding Container Names](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### Building Custom Images
+You can build custom images using a `Dockerfile` and reference them in your `docker-compose.yml` file:
+```yaml
+version: '3.8'
+services:
+  web:
+    build: ./web-app  # Path to the Dockerfile
+    ports:
+      - "80:80"
+```
+
+### Container Names
+By default, Docker Compose names containers using the format:
+```
+<project_name>_<service_name>_<index>
+```
+- `project_name`: The name of the directory containing the `docker-compose.yml` file.
+- `service_name`: The name of the service in the `docker-compose.yml` file.
+- `index`: A number (starting from 1) for multiple instances of the same service.
+
+---
+
+## [Module Summary](#section-6---docker-compose-elegant-multi-container-orchestration)
+
+### Key Takeaways
+- Docker Compose simplifies multi-container application management.
+- The `docker-compose.yml` file is used to define services, networks, and volumes.
+- Use `docker-compose up` to start services and `docker-compose down` to stop them.
+- Services can communicate with each other using service names.
+- You can build custom images and manage container names.
+
+### Next Steps
+- Practice creating `docker-compose.yml` files for different applications.
+- Experiment with advanced features like volumes, networks, and environment variables.
+
+---
