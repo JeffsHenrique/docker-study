@@ -3486,3 +3486,333 @@ By default, Docker Compose names containers using the format:
 - Experiment with advanced features like volumes, networks, and environment variables.
 
 ---
+
+# [Section 7 - WORKING WITH "UTILITY CONTAINERS" & EXECUTING COMMANDS IN CONTAINERS](#docker--kubernetes)
+
+- [Utility Containers: Why would you use them?](#utility-containers-why-would-you-use-them)
+- [Different Ways of Running Commands in Containers](#different-ways-of-running-commands-in-containers)
+- [Building a First Utility Container](#building-a-first-utility-container)
+- [Utilizing ENTRYPOINT](#utilizing-entrypoint)
+- [Using Docker Compose](#using-docker-compose)
+- [Utility Containers, Permissions & Linux](#utility-containers-permissions--linux)
+- [Module Summary](#module-summary-2)
+
+## Module Introduction & What are "Utility Containers"?
+
+### Module Introduction
+
+In this module, we explore the concept of **Utility Containers**—specialized Docker containers designed to perform specific tasks or provide tools without running a long-lived service. These containers are often used for development, debugging, or running one-off commands in an isolated environment. 
+
+Utility containers are lightweight, portable, and ensure consistency across different environments. They are particularly useful for tasks like running scripts, debugging applications, or providing tools (e.g., linters, compilers, or database clients) without requiring installation on the host machine.
+
+---
+
+### What are Utility Containers?
+
+Utility Containers are Docker containers that are designed to execute specific commands or provide tools rather than running a persistent service (like a web server or database). They are often used for:
+
+- Running one-off commands (e.g., database migrations, linting, or testing).
+- Providing a consistent environment for development tasks.
+- Debugging applications in an isolated environment.
+- Avoiding the need to install tools or dependencies on the host machine.
+
+Unlike service containers, utility containers are typically short-lived and terminate after completing their task.
+
+---
+
+## [Utility Containers: Why would you use them?](#section-7---working-with-utility-containers--executing-commands-in-containers)
+
+**Key Points:**
+- **Consistency:** Utility containers ensure that the same tools and environment are used across different machines or environments.
+- **Isolation:** They provide an isolated environment for running commands, avoiding conflicts with the host system.
+- **Portability:** Utility containers can be shared and reused across teams or projects.
+- **No Host Dependency:** You don’t need to install tools or dependencies on your local machine.
+
+**Example Use Cases:**
+- Running a database migration script.
+- Linting or formatting code.
+- Running tests in a specific environment.
+- Debugging an application with specific tools.
+
+---
+
+## [Different Ways of Running Commands in Containers](#section-7---working-with-utility-containers--executing-commands-in-containers)
+
+**Key Points:**
+- **Interactive Mode (`-it`):** Run a command interactively in a container.
+  ```bash
+  docker run -it <image_name> <command>
+  ```
+  Example:
+  ```bash
+  docker run -it ubuntu bash
+  ```
+
+- **Detached Mode (`-d`):** Run a container in the background.
+  ```bash
+  docker run -d <image_name> <command>
+  ```
+
+- **One-Off Commands:** Run a command and exit immediately.
+  ```bash
+  docker run <image_name> <command>
+  ```
+  Example:
+  ```bash
+  docker run alpine echo "Hello, World!"
+  ```
+
+- **Exec into a Running Container:** Execute a command in a running container.
+  ```bash
+  docker exec -it <container_id> <command>
+  ```
+  Example:
+  ```bash
+  docker exec -it my_container bash
+  ```
+
+---
+
+## [Building a First Utility Container](#section-7---working-with-utility-containers--executing-commands-in-containers)
+
+**Key Points:**
+- Create a `Dockerfile` to define the utility container.
+- Use a lightweight base image (e.g., `alpine` or `ubuntu`).
+- Install necessary tools or dependencies.
+- Define the default command using `CMD` or `ENTRYPOINT`.
+
+**Example:**
+```Dockerfile
+# Dockerfile
+FROM alpine:latest
+RUN apk add --no-cache curl
+CMD ["curl", "--version"]
+```
+
+**Build and Run:**
+```bash
+docker build -t my-utility-container .
+docker run my-utility-container
+```
+
+---
+
+## [Utilizing ENTRYPOINT](#section-7---working-with-utility-containers--executing-commands-in-containers)
+
+**Key Points:**
+- `ENTRYPOINT` defines the main command to run when the container starts.
+- Arguments passed to `docker run` are appended to the `ENTRYPOINT` command.
+- Useful for creating reusable utility containers.
+
+**Example:**
+```Dockerfile
+# Dockerfile
+FROM alpine:latest
+RUN apk add --no-cache curl
+ENTRYPOINT ["curl"]
+```
+
+**Run with Arguments:**
+```bash
+docker run my-utility-container https://example.com
+```
+
+---
+
+## [Using Docker Compose](#section-7---working-with-utility-containers--executing-commands-in-containers)
+
+**Key Points:**
+- Docker Compose simplifies running multi-container applications.
+- Define utility containers in a `docker-compose.yml` file.
+- Use `docker-compose run` to execute commands in a utility container.
+
+**Example:**
+```yaml
+# docker-compose.yml
+version: '3'
+services:
+  curl-utility:
+    image: alpine
+    command: curl https://example.com
+```
+
+**Run with Docker Compose:**
+```bash
+docker-compose run curl-utility
+```
+
+---
+
+## [Utility Containers, Permissions & Linux](#section-7---working-with-utility-containers--executing-commands-in-containers)
+
+**Key Points:**
+- Utility containers often need to interact with the host system (e.g., files or directories).
+- Use Docker volumes to share files between the host and container.
+- Be mindful of file permissions, especially when running as a non-root user.
+
+**Example:**
+```bash
+docker run -v $(pwd):/app -w /app my-utility-container <command>
+```
+
+**Permissions:**
+- Run the container as a specific user to avoid permission issues.
+  ```Dockerfile
+  # Dockerfile
+  FROM alpine:latest
+  RUN adduser -D myuser
+  USER myuser
+  ```
+
+
+**Q&A Section**
+This is truly an awesome course Max! Well done!
+
+I wanted to point out that on a Linux system, the Utility Container idea doesn't quite work as you describe it.  In Linux, by default Docker runs as the "Root" user, so when we do a lot of the things that you are advocating for with Utility Containers the files that get written to the Bind Mount have ownership and permissions of the Linux Root user.  (On MacOS and Windows10, since Docker is being used from within a VM, the user mappings all happen automatically due to NFS mounts.)
+
+So, for example on Linux, if I do the following (as you described in the course):
+
+Dockerfile
+
+```Dockerfile
+FROM node:14-slim
+WORKDIR /app
+```
+
+```bash
+docker build -t node-util:perm .
+```
+
+```bash
+docker run -it --rm -v $(pwd):/app node-util:perm npm init
+```
+
+```bash
+ls -la
+```
+
+total 16
+
+drwxr-xr-x  3 scott scott 4096 Oct 31 16:16 ./
+
+drwxr-xr-x 12 scott scott 4096 Oct 31 16:14 ../
+
+drwxr-xr-x  7 scott scott 4096 Oct 31 16:14 .git/
+
+-rw-r--r--  1 root  root   202 Oct 31 16:16 package.json
+
+You'll see that the ownership and permissions for the package.json file are "root".  But, regardless of the file that is being written to the Bind Mounted volume from commands emanating from within the docker container, e.g. "npm install", all come out with "Root" ownership.
+
+-------
+
+**Solution 1:  Use  predefined "node" user (if you're lucky)**
+
+There is a lot of discussion out there in the docker community (devops) about security around running Docker as a non-privileged user (which might be a good topic for you to cover as a video lecture - or maybe you have; I haven't completed the course yet).  The Official Node.js Docker Container provides such a user that they call "node". 
+
+https://github.com/nodejs/docker-node/blob/master/Dockerfile-slim.template
+
+```Dockerfile
+FROM debian:name-slim
+RUN groupadd --gid 1000 node \
+         && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
+```
+
+Luckily enough for me on my local Linux system, my "scott" uid:gid is also 1000:1000 so, this happens to map nicely to the "node" user defined within the Official Node Docker Image.
+
+So, in my case of using the Official Node Docker Container, all I need to do is make sure I specify that I want the container to run as a non-Root user that they make available.  To do that, I just add:
+
+```Dockerfile
+FROM node:14-slim
+USER node
+WORKDIR /app
+```
+
+If I rebuild my Utility Container in the normal way and re-run "npm init", the ownership of the package.json file is written as if "scott" wrote the file.
+
+```bash
+ls -la
+```
+
+total 12
+
+drwxr-xr-x  2 scott scott 4096 Oct 31 16:23 ./
+
+drwxr-xr-x 13 scott scott 4096 Oct 31 16:23 ../
+
+-rw-r--r--  1 scott scott 204 Oct 31 16:23 package.json
+
+------------
+
+Solution 2:  Remove the predefined "node" user and add yourself as the user
+
+However, if the Linux user that you are running as is not lucky to be mapped to 1000:1000, then you can modify the Utility Container Dockerfile to remove the predefined "node" user and add yourself as the user that the container will run as:
+
+-------
+
+```Dockerfile
+FROM node:14-slim
+
+RUN userdel -r node
+
+ARG USER_ID
+
+ARG GROUP_ID
+
+RUN addgroup --gid $GROUP_ID user
+
+RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
+
+USER user
+
+WORKDIR /app
+```
+-------
+
+And then build the Docker image using the following (which also gives you a nice use of ARG):
+
+```bash
+docker build -t node-util:cliuser --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .
+```
+
+And finally running it with:
+
+```bash
+docker run -it --rm -v $(pwd):/app node-util:cliuser npm init
+```
+
+```bash
+ls -la
+```
+
+total 12
+
+drwxr-xr-x  2 scott scott 4096 Oct 31 16:54 ./
+
+drwxr-xr-x 13 scott scott 4096 Oct 31 16:23 ../
+
+-rw-r--r--  1 scott scott  202 Oct 31 16:54 package.json
+
+
+
+Reference to Solution 2 above: https://vsupalov.com/docker-shared-permissions/
+
+
+
+Keep in mind that this image will not be portable, but for the purpose of the Utility Containers like this, I don't think this is an issue at all for these "Utility Containers"
+
+---
+
+## [Module Summary](#section-7---working-with-utility-containers--executing-commands-in-containers)
+
+**Key Takeaways:**
+- Utility containers are designed for running specific tasks or providing tools.
+- They ensure consistency, isolation, and portability.
+- Use `docker run`, `docker exec`, or Docker Compose to interact with utility containers.
+- Leverage `ENTRYPOINT` for reusable utility containers.
+- Be mindful of permissions when sharing files between the host and container.
+
+**Next Steps:**
+- Practice building and running utility containers for common tasks (e.g., linting, testing, or debugging).
+- Explore advanced use cases, such as integrating utility containers into CI/CD pipelines.
+
+---
