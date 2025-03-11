@@ -8,6 +8,8 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 4: NETWORKING: (CROSS-)CONTAINER COMMUNICATION](#section-4---networking-cross-container-communication)
 - [Section 5: BUILDING MULTI-CONTAINER APPLICATIONS WITH DOCKER](#section-5---building-multi-container-applications-with-docker)
 - [Section 6: DOCKER COMPOSE: ELEGANT MULTI-CONTAINER ORCHESTRATION](#section-6---docker-compose-elegant-multi-container-orchestration)
+- [Section 7: WORKING WITH "UTILITY CONTAINERS" & EXECUTING COMMANDS IN CONTAINERS](#section-7---working-with-utility-containers--executing-commands-in-containers)
+- [Section 8: A MORE COMPLEX SETUP: A LARAVEL & PHP DOCKERIZED PROJECT](#section-8---a-more-complex-setup-a-laravel--php-dockerized-project)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -3816,3 +3818,7 @@ Keep in mind that this image will not be portable, but for the purpose of the Ut
 - Explore advanced use cases, such as integrating utility containers into CI/CD pipelines.
 
 ---
+
+# [Section 8 - A MORE COMPLEX SETUP: A LARAVEL & PHP DOCKERIZED PROJECT](#docker--kubernetes)
+
+This module is to practice by dockerizing a laravel & php project. [Here is the folder containing the project.](https://github.com/JeffsHenrique/Docker-Laravel-Setup/tree/master/Docker%20Laravel)
