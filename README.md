@@ -10,6 +10,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 6: DOCKER COMPOSE: ELEGANT MULTI-CONTAINER ORCHESTRATION](#section-6---docker-compose-elegant-multi-container-orchestration)
 - [Section 7: WORKING WITH "UTILITY CONTAINERS" & EXECUTING COMMANDS IN CONTAINERS](#section-7---working-with-utility-containers--executing-commands-in-containers)
 - [Section 8: A MORE COMPLEX SETUP: A LARAVEL & PHP DOCKERIZED PROJECT](#section-8---a-more-complex-setup-a-laravel--php-dockerized-project)
+- [Section 9: DEPLOYING DOCKER CONTAINERS](#section-9---deploying-docker-containers)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -3822,3 +3823,434 @@ Keep in mind that this image will not be portable, but for the purpose of the Ut
 # [Section 8 - A MORE COMPLEX SETUP: A LARAVEL & PHP DOCKERIZED PROJECT](#docker--kubernetes)
 
 This module is to practice by dockerizing a laravel & php project. [Here is the folder containing the project.](https://github.com/JeffsHenrique/Docker-Laravel-Setup/tree/master/Docker%20Laravel)
+
+# [Section 9 - DEPLOYING DOCKER CONTAINERS](#docker--kubernetes)
+
+- [From development to production](#from-development-to-production)
+- [Deployment process & providers](#deployment-process--providers)
+- [Getting Started With an Example](#getting-started-with-an-example)
+- [Bind Mounts in Production](#bind-mounts-in-production)
+- [Introducing AWS & EC2](#introducing-aws--ec2)
+- [Connecting to an EC2 instance](#connecting-to-an-ec2-instance)
+- [Important: Installing Docker on a Virtual Machine](#important-installing-docker-on-a-virtual-machine)
+- [Installing docker on a Virtual Machine](#installing-docker-on-a-virtual-machine)
+- [Installing Docker on Linux in General](#installing-docker-on-linux-in-general)
+- [Pushing our local image to the cloud](#pushing-our-local-image-to-the-cloud)
+- [Running & Publishing the App (on EC2)](#running--publishing-the-app-on-ec2)
+- [Managing & updating the container / image](#managing--updating-the-container--image)
+- [Disadvantages of our current approach](#disadvantages-of-our-current-approach)
+- [From manual deployment to managed services](#from-manual-deployment-to-managed-services)
+- [Deploying with AWS ECS: A managed Docker container service](#deploying-with-aws-ecs-a-managed-docker-container-service)
+- [More on AWS](#more-on-aws)
+- [Updating managed containers](#updating-managed-containers)
+- [Preparing a multi-container App](#preparing-a-multi-container-app)
+- [Configuring the nodeJS backend container](#configuring-the-nodejs-backend-container)
+- [Deploying a second container & a load balancer](#deploying-a-second-container--a-load-balancer)
+- [Using a load balancer for a stable domain](#using-a-load-balancer-for-a-stable-domain)
+- [Using EFS Volumes with ECS](#using-efs-volumes-with-ecs)
+- [Our current architecture](#our-current-architecture)
+- [Databases & Containers: An important consideration](#Databases--containers-an-important-consideration)
+- [Moving to MongoDB Atlas](#moving-to-mongodb-atlas)
+- [Using MongoDB Atlas in production](#using-mongodb-atlas-in-production)
+- [Our updated & target architecture](#our-updated--target-architecture)
+- [Understanding a common problem](#understanding-a-common-problem)
+- [Creating a "build-only" container](#creating-a-build-only-container)
+- [Introducing Multi-stage builds](#introducing-multi-stage-builds)
+- [Building a multi-stage image](#building-a-multi-stage-image)
+- [Deploying a Standalone frontend app](#deploying-a-standalone-frontend-app)
+- [Development vs production: Differences](#development-vs-production-differences)
+- [Understanding multi-stage build targets](#understanding-multi-stage-build-targets)
+- [Beyond AWS](#beyond-aws)
+- [Module Summary](#module-summary-3)
+
+## Module Introduction
+
+In this module, we transition from developing Docker containers locally to deploying them in production environments. The goal is to understand the entire lifecycle of a Dockerized application, from development to deployment, and how to manage it effectively in real-world scenarios.
+
+You'll learn how to:
+- Move a Dockerized application from development to production.
+- Work with cloud providers like AWS to deploy containers.
+- Use managed services like AWS ECS (Elastic Container Service) to simplify deployment.
+- Handle multi-container applications, load balancers, and persistent storage.
+- Optimize Docker images for production using multi-stage builds.
+- Address common challenges like database management and container updates.
+
+By the end of this module, you'll have a solid understanding of how to deploy, manage, and scale Docker containers in production environments, using both manual and managed approaches.
+
+---
+
+## [From development to production](#section-9---deploying-docker-containers)
+
+- **Explanation**: Transitioning from a local development environment to a production environment involves several considerations, such as security, performance, and scalability.
+- **Key Points**:
+  - Development environments are often less strict about resource usage and security.
+  - Production environments require optimized images, secure configurations, and proper resource management.
+  - Example: A Node.js app running locally with a bind mount for live code updates won't work the same way in production.
+
+---
+
+## [Deployment process & providers](#section-9---deploying-docker-containers)
+
+- **Explanation**: The deployment process involves packaging your application, pushing it to a registry, and running it on a server or cloud provider.
+- **Key Points**:
+  - Common providers: AWS, Google Cloud Platform (GCP), Azure, DigitalOcean, etc.
+  - Steps:
+    1. Build the Docker image.
+    2. Push the image to a container registry (e.g., Docker Hub, AWS ECR).
+    3. Pull and run the image on a production server.
+  - Example: Deploying a Python Flask app to AWS EC2.
+
+---
+
+## [Getting Started With an Example](#section-9---deploying-docker-containers)
+
+- **Explanation**: We'll use a simple application (e.g., a Node.js app) to demonstrate the deployment process.
+- **Key Points**:
+  - Create a Dockerfile for the app.
+  - Build and run the app locally.
+  - Prepare the app for production (e.g., remove bind mounts, optimize the Dockerfile).
+  - Example: A "Hello World" Node.js app.
+
+---
+
+## [Bind Mounts in Production](#section-9---deploying-docker-containers)
+
+- **Explanation**: Bind mounts are useful in development for live code updates but are not recommended in production.
+- **Key Points**:
+  - Bind mounts tie the container's filesystem to the host, which can be risky in production.
+  - Use volumes or copy files into the image for production.
+  - Example: Replace `-v $(pwd):/app` with `COPY . /app` in the Dockerfile.
+
+---
+
+## [Introducing AWS & EC2](#section-9---deploying-docker-containers)
+
+- **Explanation**: AWS EC2 (Elastic Compute Cloud) is a popular service for running virtual machines in the cloud.
+- **Key Points**:
+  - EC2 instances are virtual servers that can run Docker containers.
+  - Use EC2 for full control over the deployment environment.
+  - Example: Launching an EC2 instance with Ubuntu.
+
+---
+
+## [Connecting to an EC2 instance](#section-9---deploying-docker-containers)
+
+- **Explanation**: Use SSH to connect to your EC2 instance and manage it.
+- **Key Points**:
+  - Generate a key pair for secure access.
+  - Use `ssh -i key.pem ubuntu@<public-ip>` to connect.
+  - Example: Connecting to an EC2 instance and installing Docker.
+
+---
+
+## [Important: Installing Docker on a Virtual Machine](#section-9---deploying-docker-containers)
+
+In the next lecture, we'll install Docker on a virtual EC2 instance.
+
+Please note that the following command (which is used in the next lecture) will unfortunately not work anymore:
+
+amazon-linux-extras install docker
+Instead, use this approach / these commands:
+
+sudo yum update -y
+sudo yum -y install docker
+ 
+sudo service docker start
+ 
+sudo usermod -a -G docker ec2-user
+Make sure to log out + back in after running these commands.
+
+Once you logged back in, run this command:
+
+sudo systemctl enable docker
+Thereafter, you can check whether Docker is available by running:
+
+docker version
+Also see: https://stackoverflow.com/questions/53918841/how-to-install-docker-on-amazon-linux2/61708497#61708497
+
+## [Installing docker on a Virtual Machine](#section-9---deploying-docker-containers)
+
+- **Explanation**: Docker can be installed on any Linux-based virtual machine.
+- **Key Points**:
+  - Use the official Docker installation script:
+    ```bash
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    ```
+  - Example: Installing Docker on an Ubuntu EC2 instance.
+
+---
+
+## [Installing Docker on Linux in General](#section-9---deploying-docker-containers)
+
+- **Explanation**: The process of installing Docker on Linux is similar across distributions.
+- **Key Points**:
+  - Follow the official Docker documentation for your Linux distribution.
+  - Example: Installing Docker on CentOS or Debian.
+
+---
+
+## [Pushing our local image to the cloud](#section-9---deploying-docker-containers)
+
+- **Explanation**: Push your Docker image to a container registry for deployment.
+- **Key Points**:
+  - Tag the image: `docker tag my-app:latest my-dockerhub-username/my-app:latest`.
+  - Push the image: `docker push my-dockerhub-username/my-app:latest`.
+  - Example: Pushing a Node.js app to Docker Hub.
+
+---
+
+## [Running & Publishing the App (on EC2)](#section-9---deploying-docker-containers)
+
+- **Explanation**: Pull and run the Docker image on an EC2 instance.
+- **Key Points**:
+  - Pull the image: `docker pull my-dockerhub-username/my-app:latest`.
+  - Run the container: `docker run -d -p 80:3000 my-dockerhub-username/my-app`.
+  - Example: Running a Node.js app on EC2.
+
+---
+
+## [Managing & updating the container / image](#section-9---deploying-docker-containers)
+
+- **Explanation**: Update your app by rebuilding the image and redeploying the container.
+- **Key Points**:
+  - Rebuild the image: `docker build -t my-app:latest .`.
+  - Push the updated image: `docker push my-dockerhub-username/my-app:latest`.
+  - Pull and restart the container on EC2.
+  - Example: Updating a Node.js app with a new feature.
+
+---
+
+## [Disadvantages of our current approach](#section-9---deploying-docker-containers)
+
+- **Explanation**: Manual deployment has limitations, such as lack of scalability and high maintenance.
+- **Key Points**:
+  - No automatic scaling.
+  - Manual updates are time-consuming.
+  - Example: Managing multiple EC2 instances for a high-traffic app.
+
+---
+
+## [From manual deployment to managed services](#section-9---deploying-docker-containers)
+
+- **Explanation**: Managed services like AWS ECS simplify deployment and scaling.
+- **Key Points**:
+  - ECS handles container orchestration, scaling, and load balancing.
+  - Example: Migrating from EC2 to ECS.
+
+---
+
+## [Deploying with AWS ECS: A managed Docker container service](#section-9---deploying-docker-containers)
+
+- **Explanation**: AWS ECS is a fully managed container orchestration service.
+- **Key Points**:
+  - Create an ECS cluster.
+  - Define a task definition (container configuration).
+  - Run the task as a service.
+  - Example: Deploying a Node.js app on ECS.
+
+---
+
+## [More on AWS](#section-9---deploying-docker-containers)
+
+- **Explanation**: Explore additional AWS services like ECR (Elastic Container Registry) and CloudWatch.
+- **Key Points**:
+  - ECR: A private Docker registry for storing images.
+  - CloudWatch: Monitor container logs and metrics.
+  - Example: Using ECR to store images and CloudWatch to monitor app performance.
+
+---
+
+## [Updating managed containers](#section-9---deploying-docker-containers)
+
+- **Explanation**: Update containers in a managed service like ECS.
+- **Key Points**:
+  - Update the task definition with a new image.
+  - Redeploy the service.
+  - Example: Updating a Node.js app on ECS.
+
+---
+
+## [Preparing a multi-container App](#section-9---deploying-docker-containers)
+
+- **Explanation**: Many apps consist of multiple containers (e.g., frontend, backend, database).
+- **Key Points**:
+  - Use Docker Compose for local development.
+  - Deploy each container as a separate service in production.
+  - Example: A Node.js backend with a React frontend.
+
+---
+
+## [Configuring the nodeJS backend container](#section-9---deploying-docker-containers)
+
+- **Explanation**: Configure the backend container for production.
+- **Key Points**:
+  - Set environment variables (e.g., database credentials).
+  - Optimize the Dockerfile (e.g., multi-stage builds).
+  - Example: Configuring a Node.js app to connect to MongoDB.
+
+---
+
+## [Deploying a second container & a load balancer](#section-9---deploying-docker-containers)
+
+- **Explanation**: Deploy multiple containers and use a load balancer for traffic distribution.
+- **Key Points**:
+  - Use AWS Application Load Balancer (ALB) to route traffic.
+  - Example: Deploying a React frontend and Node.js backend with an ALB.
+
+---
+
+## [Using a load balancer for a stable domain](#section-9---deploying-docker-containers)
+
+- **Explanation**: A load balancer provides a stable domain name and handles traffic distribution.
+- **Key Points**:
+  - Configure DNS for the load balancer.
+  - Example: Mapping `my-app.com` to an ALB.
+
+---
+
+## [Using EFS Volumes with ECS](#section-9---deploying-docker-containers)
+
+- **Explanation**: EFS (Elastic File System) provides persistent storage for containers.
+- **Key Points**:
+  - Mount EFS volumes to containers for shared storage.
+  - Example: Storing user uploads in an EFS volume.
+
+---
+
+## [Our current architecture](#section-9---deploying-docker-containers)
+
+- **Explanation**: Review the architecture of the deployed app.
+- **Key Points**:
+  - Frontend: React app.
+  - Backend: Node.js app.
+  - Database: MongoDB.
+  - Example: Diagram of the architecture.
+
+---
+
+## [Databases & Containers: An important consideration](#section-9---deploying-docker-containers)
+
+- **Explanation**: Databases should not be run in containers in production.
+- **Key Points**:
+  - Use managed database services (e.g., AWS RDS, MongoDB Atlas).
+  - Example: Migrating from a containerized MongoDB to MongoDB Atlas.
+
+---
+
+## [Moving to MongoDB Atlas](#section-9---deploying-docker-containers)
+
+- **Explanation**: MongoDB Atlas is a managed MongoDB service.
+- **Key Points**:
+  - Create a cluster on MongoDB Atlas.
+  - Update the app to use the Atlas connection string.
+  - Example: Connecting a Node.js app to MongoDB Atlas.
+
+---
+
+## [Using MongoDB Atlas in production](#section-9---deploying-docker-containers)
+
+- **Explanation**: Best practices for using MongoDB Atlas in production.
+- **Key Points**:
+  - Enable backups and monitoring.
+  - Use VPC peering for secure connections.
+  - Example: Configuring a production-ready MongoDB Atlas cluster.
+
+---
+
+## [Our updated & target architecture](#section-9---deploying-docker-containers)
+
+- **Explanation**: Final architecture with all components in place.
+- **Key Points**:
+  - Frontend: React app on ECS.
+  - Backend: Node.js app on ECS.
+  - Database: MongoDB Atlas.
+  - Example: Updated architecture diagram.
+
+---
+
+## [Understanding a common problem](#section-9---deploying-docker-containers)
+
+- **Explanation**: Large Docker images can slow down deployment.
+- **Key Points**:
+  - Use multi-stage builds to reduce image size.
+  - Example: Optimizing a Node.js app's Dockerfile.
+
+---
+
+## [Creating a "build-only" container](#section-9---deploying-docker-containers)
+
+- **Explanation**: Use a separate container for building the app.
+- **Key Points**:
+  - Build the app in one container and copy the output to a smaller runtime container.
+  - Example: Building a React app in a Node.js container and serving it with Nginx.
+
+---
+
+## [Introducing Multi-stage builds](#section-9---deploying-docker-containers)
+
+- **Explanation**: Multi-stage builds allow you to use multiple `FROM` statements in a Dockerfile.
+- **Key Points**:
+  - Use one stage for building and another for running.
+  - Example: A multi-stage Dockerfile for a Node.js app.
+
+---
+
+## [Building a multi-stage image](#section-9---deploying-docker-containers)
+
+- **Explanation**: Build and optimize a Docker image using multi-stage builds.
+- **Key Points**:
+  - Reduce image size by excluding build dependencies.
+  - Example: Building a Node.js app with a multi-stage Dockerfile.
+
+---
+
+## [Deploying a Standalone frontend app](#section-9---deploying-docker-containers)
+
+- **Explanation**: Deploy a frontend app separately from the backend.
+- **Key Points**:
+  - Use a static hosting service (e.g., AWS S3, Netlify).
+  - Example: Deploying a React app to AWS S3.
+
+---
+
+## [Development vs production: Differences](#section-9---deploying-docker-containers)
+
+- **Explanation**: Key differences between development and production environments.
+- **Key Points**:
+  - Development: Bind mounts, debug tools, etc.
+  - Production: Optimized images, secure configurations, etc.
+  - Example: Comparing a development and production Dockerfile.
+
+---
+
+## [Understanding multi-stage build targets](#section-9---deploying-docker-containers)
+
+- **Explanation**: Use different build targets for development and production.
+- **Key Points**:
+  - Define multiple stages in the Dockerfile.
+  - Example: A Dockerfile with `dev` and `prod` targets.
+
+---
+
+## [Beyond AWS](#section-9---deploying-docker-containers)
+
+- **Explanation**: Explore other deployment options (e.g., Kubernetes, GCP, Azure).
+- **Key Points**:
+  - Kubernetes: A powerful container orchestration platform.
+  - GCP: Google Cloud Run, GKE.
+  - Example: Deploying a Docker app on Kubernetes.
+
+---
+
+## [Module Summary](#section-9---deploying-docker-containers)
+
+- **Explanation**: Recap of the module's key takeaways.
+- **Key Points**:
+  - Learned how to deploy Docker containers in production.
+  - Explored AWS services like EC2, ECS, and ECR.
+  - Understood the importance of multi-stage builds and managed services.
+  - Example: Summarizing the deployment process for a Node.js app.
+
+---
+
