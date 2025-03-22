@@ -11,6 +11,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 7: WORKING WITH "UTILITY CONTAINERS" & EXECUTING COMMANDS IN CONTAINERS](#section-7---working-with-utility-containers--executing-commands-in-containers)
 - [Section 8: A MORE COMPLEX SETUP: A LARAVEL & PHP DOCKERIZED PROJECT](#section-8---a-more-complex-setup-a-laravel--php-dockerized-project)
 - [Section 9: DEPLOYING DOCKER CONTAINERS](#section-9---deploying-docker-containers)
+- [Section 10: GETTING STARTED WITH KUBERNETES](#section-10---getting-started-with-kubernetes)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -4372,6 +4373,91 @@ AWS ECS is a powerful service for deploying and managing Docker containers at sc
   - Explored AWS services like EC2, ECS, and ECR.
   - Understood the importance of multi-stage builds and managed services.
   - Example: Summarizing the deployment process for a Node.js app.
+
+---
+
+# [Section 10 - GETTING STARTED WITH KUBERNETES](#docker--kubernetes)
+
+## Module Summary
+
+### **Module Introduction: Getting Started with Kubernetes**
+
+In the world of modern software development and deployment, **Kubernetes** has emerged as the de facto standard for container orchestration. As organizations increasingly adopt microservices architectures and containerized applications, the need for a robust, scalable, and efficient system to manage these containers has become paramount. Kubernetes, often abbreviated as **K8s**, is the open-source platform designed to automate the deployment, scaling, and operation of containerized applications.
+
+This module, **"Getting Started with Kubernetes,"** is designed to provide you with a solid foundation in Kubernetes, its core concepts, and its ecosystem. Whether you're a developer, DevOps engineer, or IT professional, understanding Kubernetes is essential for managing containerized workloads in production environments.
+
+#### **Why Kubernetes?**
+Before diving into the technical details, it's important to understand why Kubernetes has become so popular:
+1. **Container Orchestration**: Kubernetes automates the deployment, scaling, and management of containerized applications, ensuring they run efficiently and reliably.
+2. **Scalability**: Kubernetes allows you to scale your applications seamlessly, whether you're running a few containers or thousands.
+3. **Portability**: Kubernetes is cloud-agnostic, meaning you can run your applications on any cloud provider (AWS, Azure, GCP) or on-premises infrastructure without significant changes.
+4. **Self-Healing**: Kubernetes automatically restarts failed containers, replaces and reschedules containers when nodes die, and ensures your applications are always available.
+5. **Declarative Configuration**: Kubernetes uses YAML or JSON files to define the desired state of your applications, making it easier to manage and version-control your infrastructure.
+
+#### **What You Will Learn in This Module**
+This module is structured to take you from the basics of Kubernetes to a point where you can confidently deploy and manage containerized applications. Here’s what you’ll cover:
+
+1. **Introduction to Kubernetes**:
+   - What is Kubernetes, and why is it important?
+   - Kubernetes architecture: Master Node, Worker Nodes, and their components (API Server, Scheduler, Controller Manager, etcd, Kubelet, Kube Proxy).
+   - Key concepts: Pods, Services, Deployments, ReplicaSets, Namespaces, and more.
+
+2. **Setting Up Kubernetes**:
+   - Installing Kubernetes using tools like Minikube, kubeadm, or managed services like GKE, EKS, and AKS.
+   - Understanding the Kubernetes CLI (`kubectl`) and its commands.
+
+3. **Deploying Applications on Kubernetes**:
+   - Creating and managing Pods.
+   - Using Deployments to manage application updates and rollbacks.
+   - Exposing applications using Services (ClusterIP, NodePort, LoadBalancer).
+
+4. **Kubernetes Networking**:
+   - Understanding how networking works in Kubernetes.
+   - Configuring Ingress controllers for external access.
+
+5. **Storage in Kubernetes**:
+   - Persistent Volumes (PVs) and Persistent Volume Claims (PVCs).
+   - Configuring storage for stateful applications.
+
+6. **Scaling and Self-Healing**:
+   - Horizontal Pod Autoscaler (HPA) for automatic scaling.
+   - Configuring liveness and readiness probes.
+
+7. **Advanced Topics**:
+   - ConfigMaps and Secrets for managing configuration data.
+   - Role-Based Access Control (RBAC) for security.
+   - Helm for package management and templating.
+
+8. **Monitoring and Logging**:
+   - Tools like Prometheus and Grafana for monitoring Kubernetes clusters.
+   - Centralized logging with Fluentd, Elasticsearch, and Kibana (EFK stack).
+
+9. **Best Practices**:
+   - Designing resilient and scalable applications.
+   - Security best practices for Kubernetes clusters.
+
+#### **Prerequisites**
+To get the most out of this module, you should have:
+- A basic understanding of **Docker** and containerization.
+- Familiarity with Linux command-line operations.
+- Some experience with cloud platforms (AWS, Azure, GCP) is helpful but not mandatory.
+
+#### **Tools You’ll Use**
+Throughout this module, you’ll work with the following tools:
+- **Minikube**: A tool to run Kubernetes locally for development and testing.
+- **kubectl**: The command-line interface for interacting with Kubernetes clusters.
+- **Helm**: A package manager for Kubernetes.
+- **Docker**: For building and managing container images.
+
+#### **Outcome**
+By the end of this module, you will:
+- Understand the core concepts and architecture of Kubernetes.
+- Be able to set up and manage a Kubernetes cluster.
+- Deploy, scale, and monitor containerized applications on Kubernetes.
+- Apply best practices for securing and optimizing your Kubernetes workloads.
+
+#### **Why This Matters**
+Kubernetes is not just a tool; it’s a paradigm shift in how applications are deployed and managed. By mastering Kubernetes, you’ll be equipped to handle the challenges of modern infrastructure, making you a valuable asset in any DevOps or cloud-native development team.
 
 ---
 
