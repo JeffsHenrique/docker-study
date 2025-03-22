@@ -4378,6 +4378,8 @@ AWS ECS is a powerful service for deploying and managing Docker containers at sc
 
 # [Section 10 - GETTING STARTED WITH KUBERNETES](#docker--kubernetes)
 
+- [Core Concepts of Kubernetes & Installation Steps](#core-concepts-of-kubernetes--installation-steps)
+
 ## Module Summary
 
 ### **Module Introduction: Getting Started with Kubernetes**
@@ -4460,4 +4462,181 @@ By the end of this module, you will:
 Kubernetes is not just a tool; it’s a paradigm shift in how applications are deployed and managed. By mastering Kubernetes, you’ll be equipped to handle the challenges of modern infrastructure, making you a valuable asset in any DevOps or cloud-native development team.
 
 ---
+
+## [Core Concepts of Kubernetes & Installation Steps](#section-10---getting-started-with-kubernetes)
+
+### 1. **Cluster**
+   - A Kubernetes cluster is a set of nodes (machines) that run containerized applications.
+   - It consists of:
+     - **Control Plane (Master Node)**: Manages the cluster (scheduling, scaling, updates).
+     - **Worker Nodes**: Run the applications and workloads.
+
+---
+
+### 2. **Nodes**
+   - **Worker Nodes**: Machines (physical or virtual) that run your applications.
+     - Each node has:
+       - **Kubelet**: An agent that communicates with the Control Plane.
+       - **Container Runtime**: Software like Docker or containerd to run containers.
+       - **Kube Proxy**: Manages network communication between nodes.
+   - **Control Plane Nodes**: Manage the cluster and make global decisions.
+
+---
+
+### 3. **Pods**
+   - The smallest deployable unit in Kubernetes.
+   - A Pod can contain one or more containers that share:
+     - Storage
+     - Network (same IP address)
+     - Resources (CPU, memory)
+   - Pods are ephemeral; they can be created, destroyed, or replaced dynamically.
+
+---
+
+### 4. **Deployments**
+   - A higher-level abstraction that manages Pods.
+   - Ensures a specified number of Pods are running at all times.
+   - Supports rolling updates and rollbacks.
+
+---
+
+### 5. **Services**
+   - Provides a stable network endpoint to access Pods.
+   - Types of Services:
+     - **ClusterIP**: Exposes the service internally within the cluster.
+     - **NodePort**: Exposes the service on a static port on each node.
+     - **LoadBalancer**: Exposes the service externally using a cloud provider’s load balancer.
+
+---
+
+### 6. **ConfigMaps and Secrets**
+   - **ConfigMaps**: Store configuration data as key-value pairs (e.g., environment variables).
+   - **Secrets**: Store sensitive data (e.g., passwords, tokens) in an encrypted format.
+
+---
+
+### 7. **Namespaces**
+   - Logical partitions within a cluster to organize resources.
+   - Useful for separating environments (e.g., dev, staging, prod) or teams.
+
+---
+
+### 8. **Volumes**
+   - Provides persistent storage for Pods.
+   - Types of Volumes:
+     - **Persistent Volume (PV)**: Cluster-wide storage resource.
+     - **Persistent Volume Claim (PVC)**: A request for storage by a user.
+
+---
+
+### 9. **Controllers**
+   - Ensure the desired state of the cluster matches the actual state.
+   - Examples:
+     - **ReplicaSet**: Ensures a specified number of Pod replicas are running.
+     - **DaemonSet**: Ensures a copy of a Pod runs on all or specific nodes.
+     - **StatefulSet**: Manages stateful applications (e.g., databases).
+
+---
+
+### 10. **Ingress**
+   - Manages external access to services in a cluster.
+   - Provides HTTP/HTTPS routing, load balancing, and SSL termination.
+
+---
+
+### 11. **Helm**
+   - A package manager for Kubernetes.
+   - Simplifies application deployment using **Helm Charts** (pre-configured Kubernetes resources).
+
+---
+
+### 12. **Kubectl**
+   - The command-line tool for interacting with a Kubernetes cluster.
+   - Common commands:
+     - `kubectl get pods`: List Pods.
+     - `kubectl apply -f <file.yaml>`: Apply a configuration file.
+     - `kubectl describe pod <pod-name>`: Get detailed info about a Pod.
+
+---
+
+## **Installation Steps**
+
+### 1. **Install Docker**
+   - Kubernetes requires a container runtime like Docker.
+   - Install Docker on all nodes (Control Plane and Worker Nodes):
+     ```bash
+     sudo apt-get update
+     sudo apt-get install docker.io
+     sudo systemctl enable docker
+     sudo systemctl start docker
+     ```
+
+---
+
+### 2. **Install Kubernetes Tools**
+   - Install `kubeadm`, `kubectl`, and `kubelet` on all nodes:
+     ```bash
+     sudo apt-get update
+     sudo apt-get install -y apt-transport-https ca-certificates curl
+     sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+     echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+     sudo apt-get update
+     sudo apt-get install -y kubelet kubeadm kubectl
+     sudo apt-mark hold kubelet kubeadm kubectl
+     ```
+
+---
+
+### 3. **Initialize the Control Plane**
+   - On the Control Plane node, initialize the cluster:
+     ```bash
+     sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+     ```
+   - Follow the instructions to set up `kubectl` for the current user:
+     ```bash
+     mkdir -p $HOME/.kube
+     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+     sudo chown $(id -u):$(id -g) $HOME/.kube/config
+     ```
+
+---
+
+### 4. **Join Worker Nodes**
+   - On each Worker Node, run the `kubeadm join` command provided after `kubeadm init`.
+     ```bash
+     kubeadm join <control-plane-ip>:<port> --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+     ```
+
+---
+
+### 5. **Install a Network Plugin**
+   - Kubernetes requires a network plugin for Pod communication.
+   - Install **Calico** (or another plugin like Flannel, Weave):
+     ```bash
+     kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+     ```
+
+---
+
+### 6. **Verify the Cluster**
+   - Check the status of the nodes:
+     ```bash
+     kubectl get nodes
+     ```
+   - Ensure all nodes are in the `Ready` state.
+
+---
+
+### 7. **Deploy Applications**
+   - Use `kubectl` or Helm to deploy applications.
+   - Example:
+     ```bash
+     kubectl create deployment nginx --image=nginx
+     kubectl expose deployment nginx --port=80 --type=NodePort
+     ```
+
+---
+
+## **Summary**
+Kubernetes is a robust platform for managing containerized applications. Its core concepts include Pods, Deployments, Services, ConfigMaps, Secrets, and more. To set up a Kubernetes cluster, you need to install Docker, Kubernetes tools (`kubeadm`, `kubectl`, `kubelet`), initialize the Control Plane, join Worker Nodes, and install a network plugin. Once set up, you can deploy and manage applications using `kubectl` or Helm.
 
