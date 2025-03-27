@@ -4379,6 +4379,8 @@ AWS ECS is a powerful service for deploying and managing Docker containers at sc
 # [Section 10 - GETTING STARTED WITH KUBERNETES](#docker--kubernetes)
 
 - [Core Concepts of Kubernetes & Installation Steps](#core-concepts-of-kubernetes--installation-steps)
+- [Understanding Kubernetes Objects (Resources)](#understanding-kubernetes-objects-resources)
+- [Using the Imperative Approach]()
 
 ## Module Summary
 
@@ -4640,3 +4642,340 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 ## **Summary**
 Kubernetes is a robust platform for managing containerized applications. Its core concepts include Pods, Deployments, Services, ConfigMaps, Secrets, and more. To set up a Kubernetes cluster, you need to install Docker, Kubernetes tools (`kubeadm`, `kubectl`, `kubelet`), initialize the Control Plane, join Worker Nodes, and install a network plugin. Once set up, you can deploy and manage applications using `kubectl` or Helm.
 
+## [Understanding Kubernetes Objects (Resources)](#section-10---getting-started-with-kubernetes)
+
+Kubernetes objects are persistent entities in the Kubernetes system that represent the state of your cluster. They describe what containerized applications are running (and on which nodes), the resources available to them, and the policies around how they behave.
+
+### Core Kubernetes Objects
+
+#### 1. Pod
+The smallest and simplest Kubernetes object. A Pod represents a single instance of a running process in your cluster.
+
+**Example YAML:**
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.14.2
+    ports:
+    - containerPort: 80
+```
+
+#### 2. Deployment
+Manages a set of identical Pods, ensuring they're running and up-to-date.
+
+**Example YAML:**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+```
+
+#### 3. Service
+An abstract way to expose an application running on a set of Pods as a network service.
+
+**Example YAML:**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+```
+
+#### 4. ConfigMap
+Allows you to decouple configuration artifacts from container images.
+
+**Example YAML:**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: game-config
+data:
+  game.properties: |
+    enemy.types=aliens,monsters
+    player.maximum-lives=5    
+  ui.properties: |
+    color.good=purple
+    color.bad=yellow    
+```
+
+#### 5. Secret
+Similar to ConfigMap but for sensitive data (encoded in base64).
+
+**Example YAML:**
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: MWYyZDFlMmU2N2Rm
+```
+
+#### 6. Namespace
+Virtual clusters inside a physical cluster, used for organizing resources.
+
+**Example YAML:**
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+```
+
+#### 7. PersistentVolume (PV) and PersistentVolumeClaim (PVC)
+PV represents storage in the cluster, while PVC is a request for storage by a user.
+
+**Example PV:**
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-volume
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+```
+
+**Example PVC:**
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+```
+
+#### 8. StatefulSet
+Manages the deployment and scaling of stateful applications.
+
+**Example YAML:**
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  serviceName: "nginx"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+          name: web
+```
+
+### How These Objects Work Together
+
+Imagine you're deploying a web application:
+1. You create a **Deployment** to manage your application Pods
+2. The Deployment creates **Pods** with your container images
+3. You expose these Pods via a **Service**
+4. Configuration is managed via **ConfigMaps** and **Secrets**
+5. If your app needs storage, you use **PVs** and **PVCs**
+6. Everything is organized in a **Namespace**
+
+This modular approach gives you flexibility and control over your applications in Kubernetes.
+
+## [Using the Imperative Approach](#section-10---getting-started-with-kubernetes)
+
+The imperative approach in Kubernetes involves running direct `kubectl` commands to create, modify, or delete resources, as opposed to the declarative approach which uses YAML files. This is great for quick tasks, experimentation, and learning.
+
+### Common Imperative Commands with Examples
+
+#### 1. Creating Resources
+
+**Pod:**
+```bash
+kubectl run nginx-pod --image=nginx:1.14.2 --port=80
+```
+
+**Deployment:**
+```bash
+kubectl create deployment nginx-deployment --image=nginx:1.14.2 --replicas=3
+```
+
+**Namespace:**
+```bash
+kubectl create namespace dev
+```
+
+#### 2. Viewing Resources
+
+**List pods:**
+```bash
+kubectl get pods
+```
+
+**List deployments:**
+```bash
+kubectl get deployments
+```
+
+**Get detailed info about a pod:**
+```bash
+kubectl describe pod nginx-pod
+```
+
+#### 3. Modifying Resources
+
+**Scale a deployment:**
+```bash
+kubectl scale deployment nginx-deployment --replicas=5
+```
+
+**Update a deployment's image:**
+```bash
+kubectl set image deployment/nginx-deployment nginx=nginx:1.19.0
+```
+
+**Add a label to a pod:**
+```bash
+kubectl label pods nginx-pod environment=production
+```
+
+#### 4. Interacting with Pods
+
+**Execute a command in a pod:**
+```bash
+kubectl exec nginx-pod -- ls /usr/share/nginx/html
+```
+
+**Get logs from a pod:**
+```bash
+kubectl logs nginx-pod
+```
+
+**Port-forward to a pod:**
+```bash
+kubectl port-forward nginx-pod 8080:80
+```
+
+#### 5. Deleting Resources
+
+**Delete a pod:**
+```bash
+kubectl delete pod nginx-pod
+```
+
+**Delete a deployment:**
+```bash
+kubectl delete deployment nginx-deployment
+```
+
+**Delete all resources in a namespace:**
+```bash
+kubectl delete all --all -n dev
+```
+
+### Practical Example Workflow
+
+Let's walk through a complete example using only imperative commands:
+
+1. **Create a namespace:**
+   ```bash
+   kubectl create namespace my-app
+   ```
+
+2. **Create a deployment:**
+   ```bash
+   kubectl create deployment web-app --image=nginx:1.19.0 -n my-app --replicas=2
+   ```
+
+3. **Expose the deployment as a service:**
+   ```bash
+   kubectl expose deployment web-app --type=LoadBalancer --port=80 -n my-app
+   ```
+
+4. **Check the status:**
+   ```bash
+   kubectl get all -n my-app
+   ```
+
+5. **Scale up the deployment:**
+   ```bash
+   kubectl scale deployment web-app --replicas=4 -n my-app
+   ```
+
+6. **Update the image version:**
+   ```bash
+   kubectl set image deployment/web-app nginx=nginx:1.21.0 -n my-app
+   ```
+
+7. **Clean up everything:**
+   ```bash
+   kubectl delete namespace my-app
+   ```
+
+### When to Use Imperative Approach
+
+1. **Quick testing** - When you want to quickly test something
+2. **Troubleshooting** - When debugging issues in your cluster
+3. **Learning Kubernetes** - Great for beginners to understand concepts
+4. **One-off tasks** - For operations you don't need to repeat
+
+### Important Notes:
+
+1. While convenient, imperative commands don't provide the same level of version control and reproducibility as declarative YAML files.
+
+2. For production environments, the declarative approach (using YAML files with `kubectl apply`) is generally recommended.
+
+3. You can generate YAML from imperative commands using the `--dry-run=client -o yaml` flags:
+   ```bash
+   kubectl create deployment web-app --image=nginx --dry-run=client -o yaml > deployment.yaml
+   ```
+
+4. Many imperative commands have shorthand versions:
+   ```bash
+   kubectl get po  # instead of kubectl get pods
+   kubectl get svc # instead of kubectl get services
+   ```
