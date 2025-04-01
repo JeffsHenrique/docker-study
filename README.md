@@ -4380,7 +4380,8 @@ AWS ECS is a powerful service for deploying and managing Docker containers at sc
 
 - [Core Concepts of Kubernetes & Installation Steps](#core-concepts-of-kubernetes--installation-steps)
 - [Understanding Kubernetes Objects (Resources)](#understanding-kubernetes-objects-resources)
-- [Using the Imperative Approach]()
+- [Using the Imperative Approach](#using-the-imperative-approach)
+- [The Declarative Approach in Kubernetes](#the-declarative-approach-in-kubernetes)
 
 ## Module Summary
 
@@ -4979,3 +4980,171 @@ Let's walk through a complete example using only imperative commands:
    kubectl get po  # instead of kubectl get pods
    kubectl get svc # instead of kubectl get services
    ```
+
+## [The Declarative Approach in Kubernetes](#section-10---getting-started-with-kubernetes)
+
+The declarative approach is the recommended way to manage Kubernetes resources in production environments. Instead of issuing direct commands, you declare the desired state of your system in YAML or JSON files, and Kubernetes works to make the cluster match that state.
+
+### Core Principles
+
+1. **Desired State Configuration**: You define what you want, not how to get there
+2. **Idempotency**: Applying the same configuration multiple times has the same effect
+3. **Version Control Friendly**: Configuration files can be stored in source control
+
+### Basic Workflow
+
+1. Create YAML manifest files
+2. Apply them with `kubectl apply -f <file>`
+3. Kubernetes reconciles the actual state with your desired state
+
+### Example Manifest Files
+
+#### 1. Pod Example (pod.yaml)
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.19.0
+    ports:
+    - containerPort: 80
+```
+
+#### 2. Deployment Example (deployment.yaml)
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.19.0
+        ports:
+        - containerPort: 80
+```
+
+#### 3. Service Example (service.yaml)
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+```
+
+### How to Use These Files
+
+1. **Apply a single file**:
+```bash
+kubectl apply -f pod.yaml
+```
+
+2. **Apply multiple files in a directory**:
+```bash
+kubectl apply -f k8s-configs/
+```
+
+3. **Check what would be applied (dry run)**:
+```bash
+kubectl apply -f deployment.yaml --dry-run=client
+```
+
+4. **View the current configuration**:
+```bash
+kubectl get deployment nginx-deployment -o yaml
+```
+
+### Managing Updates
+
+1. **Edit the YAML file** (change image version, replica count, etc.)
+2. **Reapply the configuration**:
+```bash
+kubectl apply -f deployment.yaml
+```
+
+3. **View the rollout status**:
+```bash
+kubectl rollout status deployment/nginx-deployment
+```
+
+### Advanced Techniques
+
+1. **Kustomize for environment-specific configurations**:
+```
+# kustomization.yaml
+resources:
+- deployment.yaml
+images:
+- name: nginx
+  newTag: 1.21.0
+```
+
+Apply with:
+```bash
+kubectl apply -k .
+```
+
+2. **Helm charts** for packaging applications:
+```bash
+helm install my-nginx bitnami/nginx
+```
+
+### Benefits of Declarative Approach
+
+1. **Reproducibility**: Exactly the same configuration can be applied to different environments
+2. **Auditability**: Changes are tracked in version control
+3. **Collaboration**: Teams can review changes before applying
+4. **GitOps**: Enables practices like configuration drift detection
+
+### Example Workflow
+
+1. Create configuration files:
+```bash
+mkdir k8s-configs
+# Create deployment.yaml, service.yaml, etc.
+```
+
+2. Apply to cluster:
+```bash
+kubectl apply -f k8s-configs/
+```
+
+3. Make changes:
+```bash
+vim k8s-configs/deployment.yaml  # Update image version
+```
+
+4. Reapply:
+```bash
+kubectl apply -f k8s-configs/
+```
+
+5. Check status:
+```bash
+kubectl get all
+kubectl rollout history deployment/nginx-deployment
+```
+
+The declarative approach is particularly powerful when combined with CI/CD pipelines, where configuration changes can be automatically applied after passing through review processes.
