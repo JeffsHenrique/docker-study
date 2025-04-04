@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: second-app-deployment
+  labels:
+    group: example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: second-app
+      tier: backend
+    # matchExpressions:
+    #   - {key: app, operator: In, values: [second-app, first-app]}
+  template:
+    metadata:
+      labels:
+        app: second-app
+        tier: backend
+    spec:
+      containers:
+        - name: second-node
+          image: jeffshenrique/kub-first-app:2
+          imagePullPolicy: Always ## if image tag is latest, you don't need it
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 3
+            initialDelaySeconds: 5
+        # - name: ...
+        #   image: ...
