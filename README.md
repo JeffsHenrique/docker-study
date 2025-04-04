@@ -12,6 +12,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 8: A MORE COMPLEX SETUP: A LARAVEL & PHP DOCKERIZED PROJECT](#section-8---a-more-complex-setup-a-laravel--php-dockerized-project)
 - [Section 9: DEPLOYING DOCKER CONTAINERS](#section-9---deploying-docker-containers)
 - [Section 10: GETTING STARTED WITH KUBERNETES](#section-10---getting-started-with-kubernetes)
+- [Section 11: MANAGING DATA & VOLUMES WITH KUBERNETES](#section-11-managing-data--volumes-with-kubernetes)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -4562,9 +4563,9 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-## **Installation Steps**
+### **Installation Steps**
 
-### 1. **Install Docker**
+#### 1. **Install Docker**
    - Kubernetes requires a container runtime like Docker.
    - Install Docker on all nodes (Control Plane and Worker Nodes):
      ```bash
@@ -4576,7 +4577,7 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-### 2. **Install Kubernetes Tools**
+#### 2. **Install Kubernetes Tools**
    - Install `kubeadm`, `kubectl`, and `kubelet` on all nodes:
      ```bash
      sudo apt-get update
@@ -4590,7 +4591,7 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-### 3. **Initialize the Control Plane**
+#### 3. **Initialize the Control Plane**
    - On the Control Plane node, initialize the cluster:
      ```bash
      sudo kubeadm init --pod-network-cidr=10.244.0.0/16
@@ -4604,7 +4605,7 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-### 4. **Join Worker Nodes**
+#### 4. **Join Worker Nodes**
    - On each Worker Node, run the `kubeadm join` command provided after `kubeadm init`.
      ```bash
      kubeadm join <control-plane-ip>:<port> --token <token> --discovery-token-ca-cert-hash sha256:<hash>
@@ -4612,7 +4613,7 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-### 5. **Install a Network Plugin**
+#### 5. **Install a Network Plugin**
    - Kubernetes requires a network plugin for Pod communication.
    - Install **Calico** (or another plugin like Flannel, Weave):
      ```bash
@@ -4621,7 +4622,7 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-### 6. **Verify the Cluster**
+#### 6. **Verify the Cluster**
    - Check the status of the nodes:
      ```bash
      kubectl get nodes
@@ -4630,7 +4631,7 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-### 7. **Deploy Applications**
+#### 7. **Deploy Applications**
    - Use `kubectl` or Helm to deploy applications.
    - Example:
      ```bash
@@ -4640,7 +4641,7 @@ Kubernetes is not just a tool; it’s a paradigm shift in how applications are d
 
 ---
 
-## **Summary**
+### **Summary**
 Kubernetes is a robust platform for managing containerized applications. Its core concepts include Pods, Deployments, Services, ConfigMaps, Secrets, and more. To set up a Kubernetes cluster, you need to install Docker, Kubernetes tools (`kubeadm`, `kubectl`, `kubelet`), initialize the Control Plane, join Worker Nodes, and install a network plugin. Once set up, you can deploy and manage applications using `kubectl` or Helm.
 
 ## [Understanding Kubernetes Objects (Resources)](#section-10---getting-started-with-kubernetes)
@@ -5148,3 +5149,656 @@ kubectl rollout history deployment/nginx-deployment
 ```
 
 The declarative approach is particularly powerful when combined with CI/CD pipelines, where configuration changes can be automatically applied after passing through review processes.
+
+# [Section 11: MANAGING DATA & VOLUMES WITH KUBERNETES](#docker--kubernetes)
+
+- [Getting Started with Kubernetes Volumes](#getting-started-with-kubernetes-volumes)
+- [Kubernetes Persistent Volumes (PV) and Environment Variables](#kubernetes-persistent-volumes-pv-and-environment-variables)
+
+## Module Summary
+
+This module will likely cover how Kubernetes handles persistent data storage, which is essential for stateful applications. Here's what you can expect to learn:
+
+### 1. Kubernetes Volume Types
+
+Kubernetes provides several volume types for different use cases:
+
+```yaml
+# Example Pod with an emptyDir volume
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: nginx
+    name: nginx-container
+    volumeMounts:
+    - mountPath: /cache
+      name: cache-volume
+  volumes:
+  - name: cache-volume
+    emptyDir: {}
+```
+
+### 2. Persistent Volumes (PV) and Persistent Volume Claims (PVC)
+
+The PV/PVC abstraction separates storage administration from consumption:
+
+```yaml
+# PersistentVolume example
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-volume
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/data
+```
+
+```yaml
+# PersistentVolumeClaim example
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+```
+
+### 3. Using PVCs in Pods
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-pvc
+spec:
+  containers:
+    - name: myapp
+      image: nginx
+      volumeMounts:
+      - name: my-storage
+        mountPath: "/var/www/html"
+  volumes:
+    - name: my-storage
+      persistentVolumeClaim:
+        claimName: pv-claim
+```
+
+### 4. Storage Classes
+
+For dynamic volume provisioning:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  fsType: ext4
+```
+
+### 5. Common Commands
+
+```bash
+# List volumes
+kubectl get pv
+kubectl get pvc
+
+# Describe a volume
+kubectl describe pv pv-volume
+
+# Create resources from YAML
+kubectl apply -f pv.yaml
+kubectl apply -f pvc.yaml
+
+# Delete resources
+kubectl delete pvc pv-claim
+kubectl delete pv pv-volume
+```
+
+### 6. ConfigMaps and Secrets for Configuration Data
+
+```yaml
+# ConfigMap example
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_COLOR: blue
+  APP_MODE: prod
+```
+
+### 7. StatefulSets for Stateful Applications
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  serviceName: "nginx"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts:
+        - name: www
+          mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+  - metadata:
+      name: www
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+```
+
+The module will likely emphasize that while containers are ephemeral, data often needs to persist beyond the lifecycle of individual containers or pods. You'll learn how to properly manage this persistence in Kubernetes.
+
+## [Getting Started with Kubernetes Volumes](#section-11-managing-data--volumes-with-kubernetes)
+
+Kubernetes volumes are used to persist data beyond the lifecycle of a pod and to share data between containers in a pod. Here's a detailed look at different volume types with examples:
+
+### 1. `emptyDir` - Temporary Storage
+
+Creates an empty directory that exists as long as the Pod is running.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-emptydir
+spec:
+  containers:
+  - name: writer
+    image: alpine
+    command: ["/bin/sh", "-c", "echo 'Hello' > /data/hello && sleep 3600"]
+    volumeMounts:
+    - name: shared-data
+      mountPath: /data
+  - name: reader
+    image: alpine
+    command: ["/bin/sh", "-c", "cat /data/hello && sleep 3600"]
+    volumeMounts:
+    - name: shared-data
+      mountPath: /data
+  volumes:
+  - name: shared-data
+    emptyDir: {}
+```
+
+### 2. `hostPath` - Node Filesystem Access
+
+Mounts a file or directory from the host node's filesystem into the pod.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-hostpath
+spec:
+  containers:
+  - name: hostpath-container
+    image: nginx
+    volumeMounts:
+    - name: hostpath-volume
+      mountPath: /host-data
+  volumes:
+  - name: hostpath-volume
+    hostPath:
+      path: /data
+      type: Directory  # Other types: File, DirectoryOrCreate, Socket, etc.
+```
+
+### 3. `configMap` and `secret` - Configuration Data
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-pod
+spec:
+  containers:
+  - name: myapp
+    image: nginx
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config
+  volumes:
+  - name: config-volume
+    configMap:
+      name: my-configmap
+      items:
+      - key: config-file
+        path: special-config
+```
+
+### 4. `persistentVolumeClaim` - Persistent Storage
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-pod
+spec:
+  containers:
+  - name: pvc-container
+    image: nginx
+    volumeMounts:
+    - name: pvc-volume
+      mountPath: /usr/share/nginx/html
+  volumes:
+  - name: pvc-volume
+    persistentVolumeClaim:
+      claimName: my-pvc
+```
+
+### 5. CSI (Container Storage Interface) Volumes
+
+CSI enables third-party storage providers to develop plugins without adding to the core Kubernetes code.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: csi-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: ebs.csi.aws.com
+    volumeHandle: vol-12345678
+    fsType: ext4
+```
+
+### 6. `nfs` - Network File System
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.example.com
+    path: "/exports/data"
+```
+
+### 7. `awsElasticBlockStore` / `gcePersistentDisk` - Cloud Provider Volumes
+
+```yaml
+# AWS EBS example
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aws-ebs-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  awsElasticBlockStore:
+    volumeID: vol-12345678
+    fsType: ext4
+```
+
+### 8. `downwardAPI` - Pod Information
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: downwardapi-pod
+  labels:
+    zone: us-east-1
+    cluster: production
+spec:
+  containers:
+  - name: client-container
+    image: busybox
+    command: ["sh", "-c", "while true; do if [[ -e /etc/podinfo/labels ]]; then cat /etc/podinfo/labels; fi; sleep 5; done"]
+    volumeMounts:
+    - name: podinfo
+      mountPath: /etc/podinfo
+  volumes:
+  - name: podinfo
+    downwardAPI:
+      items:
+      - path: "labels"
+        fieldRef:
+          fieldPath: metadata.labels
+```
+
+### Key Differences
+
+| Volume Type | Persistence | Use Case | Access Mode |
+|-------------|-------------|----------|-------------|
+| `emptyDir` | Pod lifetime | Temporary storage, inter-container communication | ReadWriteOnce |
+| `hostPath` | Node lifetime | Node-specific data, testing | ReadWriteOnce |
+| `configMap`/`secret` | Cluster lifetime | Configuration data | ReadOnly |
+| `persistentVolume` | Persistent | Application data | Depends on backend |
+| CSI | Persistent | Cloud/enterprise storage | Depends on driver |
+
+### Best Practices
+
+1. Use `emptyDir` for temporary data that doesn't need to persist beyond the pod's lifecycle
+2. Avoid `hostPath` in production unless absolutely necessary (security implications)
+3. For production workloads, use PersistentVolumes with appropriate storage classes
+4. CSI volumes are the modern standard for external storage integration
+5. Always consider access modes (ReadWriteOnce, ReadOnlyMany, ReadWriteMany) based on your application needs
+
+## [Kubernetes Persistent Volumes (PV) and Environment Variables](#section-11-managing-data--volumes-with-kubernetes)
+
+### Persistent Volumes (PV) Deep Dive
+
+Persistent Volumes (PVs) are cluster-wide storage resources that exist independently of any pod. They provide persistent storage that survives pod restarts and rescheduling.
+
+### Key Concepts:
+- **PV**: The actual storage resource in the cluster
+- **PVC (PersistentVolumeClaim)**: A request for storage by a user
+- **StorageClass**: Defines the "class" of storage (performance characteristics, provisioning details)
+
+#### Example PV with Different Provisioners
+
+##### 1. Local Storage PV Example
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv
+spec:
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /mnt/disks/ssd1
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - node-1
+```
+
+##### 2. AWS EBS PV Example
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aws-ebs-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  awsElasticBlockStore:
+    volumeID: vol-0abcdef1234567890
+    fsType: ext4
+```
+
+##### 3. PVC Example
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+```
+
+##### 4. Pod Using PVC Example
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pv-pod
+spec:
+  containers:
+    - name: app-container
+      image: nginx
+      volumeMounts:
+        - name: app-storage
+          mountPath: "/usr/share/nginx/html"
+  volumes:
+    - name: app-storage
+      persistentVolumeClaim:
+        claimName: my-pvc
+```
+
+### Environment Variables and Persistent Volumes
+
+You can expose information about persistent volumes to your containers through environment variables. This is particularly useful for:
+
+1. Configuring applications with mount paths
+2. Passing volume-specific configuration
+3. Making storage information available to applications
+
+#### Example 1: Basic Environment Variables
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: env-pv-pod
+spec:
+  containers:
+  - name: app
+    image: nginx
+    env:
+    - name: DATA_DIR
+      value: "/usr/share/nginx/html"
+    - name: STORAGE_SIZE
+      value: "5Gi"
+    volumeMounts:
+    - name: app-storage
+      mountPath: "/usr/share/nginx/html"
+  volumes:
+  - name: app-storage
+    persistentVolumeClaim:
+      claimName: my-pvc
+```
+
+#### Example 2: Using Downward API for PV Information
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: downward-pv-pod
+spec:
+  containers:
+  - name: app
+    image: nginx
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: PVC_NAME
+      value: my-pvc  # Could also use a ConfigMap or other reference
+    volumeMounts:
+    - name: app-storage
+      mountPath: "/data"
+  volumes:
+  - name: app-storage
+    persistentVolumeClaim:
+      claimName: my-pvc
+```
+
+#### Example 3: Using ConfigMap with PV Information
+
+First, create a ConfigMap:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: storage-config
+data:
+  storage.path: "/data"
+  storage.type: "ssd"
+```
+
+Then use it in your Pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-pv-pod
+spec:
+  containers:
+  - name: app
+    image: nginx
+    envFrom:
+    - configMapRef:
+        name: storage-config
+    volumeMounts:
+    - name: app-storage
+      mountPath: "/data"
+  volumes:
+  - name: app-storage
+    persistentVolumeClaim:
+      claimName: my-pvc
+```
+
+#### Example 4: Dynamic Volume Information with Init Containers
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-pv-pod
+spec:
+  initContainers:
+  - name: init-storage
+    image: busybox
+    command: ['sh', '-c', 'echo "Volume initialized at $(date)" > /data/init.log']
+    volumeMounts:
+    - name: app-storage
+      mountPath: /data
+  containers:
+  - name: app
+    image: nginx
+    env:
+    - name: INIT_TIME
+      valueFrom:
+        configMapKeyRef:
+          name: storage-config
+          key: init.time
+    volumeMounts:
+    - name: app-storage
+      mountPath: /usr/share/nginx/html
+  volumes:
+  - name: app-storage
+    persistentVolumeClaim:
+      claimName: my-pvc
+```
+
+### Best Practices for PVs and Environment Variables
+
+1. **Use Storage Classes**: For dynamic provisioning rather than manual PV creation
+   ```yaml
+   kind: StorageClass
+   apiVersion: storage.k8s.io/v1
+   metadata:
+     name: fast
+   provisioner: kubernetes.io/aws-ebs
+   parameters:
+     type: gp3
+     fsType: ext4
+   ```
+
+2. **Secure Sensitive Data**: Use Secrets instead of ConfigMaps for sensitive information
+   ```yaml
+   env:
+   - name: DB_PASSWORD
+     valueFrom:
+       secretKeyRef:
+         name: db-secret
+         key: password
+   ```
+
+3. **Use Volume Subpaths**: When multiple containers need different directories in the same volume
+   ```yaml
+   volumeMounts:
+   - name: shared-data
+     mountPath: /app/config
+     subPath: config
+   - name: shared-data
+     mountPath: /app/logs
+     subPath: logs
+   ```
+
+4. **Consider Volume Snapshots**: For backup purposes
+   ```yaml
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: db-snapshot
+   spec:
+     volumeSnapshotClassName: csi-aws-vsc
+     source:
+       persistentVolumeClaimName: db-pvc
+   ```
+
+5. **Resource Limits**: Always set resource requests and limits for pods using PVs
+   ```yaml
+   resources:
+     requests:
+       memory: "64Mi"
+       cpu: "250m"
+     limits:
+       memory: "128Mi"
+       cpu: "500m"
+   ```
+
+This combination of persistent volumes and environment variables provides a flexible way to manage storage and configuration in your Kubernetes applications.
