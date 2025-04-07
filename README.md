@@ -13,6 +13,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 9: DEPLOYING DOCKER CONTAINERS](#section-9---deploying-docker-containers)
 - [Section 10: GETTING STARTED WITH KUBERNETES](#section-10---getting-started-with-kubernetes)
 - [Section 11: MANAGING DATA & VOLUMES WITH KUBERNETES](#section-11-managing-data--volumes-with-kubernetes)
+- [Section 12: KUBERNETES NETWORKING](#section-12-kubernetes-networking)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -5802,3 +5803,266 @@ spec:
    ```
 
 This combination of persistent volumes and environment variables provides a flexible way to manage storage and configuration in your Kubernetes applications.
+
+# [Section 12: KUBERNETES NETWORKING](#docker--kubernetes)
+
+- [Pod-internal Communication](#pod-internal-communication)
+
+## Module Summary
+
+In a Kubernetes networking module, you'll typically learn about how containers and pods communicate with each other, with services, and with the outside world. Here's what you can expect to see:
+
+### Core Concepts
+
+1. **Pod Networking**
+   - Every pod gets its own IP address
+   - Containers in a pod share network namespace (can communicate via localhost)
+
+2. **Service Networking**
+   - Services provide stable IP addresses and DNS names for pods
+   - Load balancing across pod replicas
+
+### Key Components
+
+#### 1. Services
+```yaml
+# Example Service definition
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: my-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9376
+```
+
+Types of Services:
+- **ClusterIP** (default) - internal cluster virtual IP
+- **NodePort** - exposes service on each node's IP at a static port
+- **LoadBalancer** - creates external load balancer in cloud providers
+- **ExternalName** - maps to external DNS name
+
+#### 2. Ingress
+```yaml
+# Example Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+spec:
+  rules:
+  - host: myapp.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: my-service
+            port:
+              number: 80
+```
+
+#### 3. Network Policies
+```yaml
+# Example Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app
+spec:
+  podSelector:
+    matchLabels:
+      app: my-app
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          role: frontend
+    ports:
+    - protocol: TCP
+      port: 6379
+```
+
+### Common Commands
+
+```bash
+# Get services
+kubectl get svc
+
+# Describe a service
+kubectl describe svc my-service
+
+# Get endpoints (to see which pods a service is routing to)
+kubectl get endpoints
+
+# Get ingress resources
+kubectl get ingress
+
+# Apply a network policy
+kubectl apply -f network-policy.yaml
+
+# Port-forward to a service (for testing)
+kubectl port-forward svc/my-service 8080:80
+```
+
+### DNS in Kubernetes
+
+- Services get DNS names: `<service-name>.<namespace>.svc.cluster.local`
+- Pods get DNS names (if enabled): `<pod-ip>.<namespace>.pod.cluster.local`
+
+### CNI (Container Network Interface)
+
+You might learn about different CNI plugins like:
+- Calico
+- Flannel
+- Weave Net
+- Cilium
+
+Example of installing Calico:
+```bash
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+```
+
+## [Pod-internal Communication](#section-12-kubernetes-networking)
+
+In Kubernetes, pod-internal communication refers to how containers within the **same pod** communicate with each other. This is fundamentally different from inter-pod communication because containers in a pod share several Linux namespaces, including the network namespace.
+
+### Key Characteristics
+
+1. **Shared Network Namespace**: All containers in a pod share the same IP address and port space
+2. **Localhost Communication**: Containers communicate via `localhost` or `127.0.0.1`
+3. **Shared Volumes**: Containers can also communicate via shared filesystem volumes
+
+### Real-World Examples
+
+#### Example 1: Web Server + Sidecar Container
+
+A common pattern is having a main application container with a sidecar (like a logging agent or service mesh proxy).
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-server
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+    ports:
+    - containerPort: 80
+  - name: log-collector
+    image: fluentd:latest
+    volumeMounts:
+    - name: logs
+      mountPath: /var/log/nginx
+  volumes:
+  - name: logs
+    emptyDir: {}
+```
+
+**Communication Patterns**:
+1. **Shared Volume**: Nginx writes logs to `/var/log/nginx`, Fluentd reads from the same location
+2. **Network Communication**: If Fluentd exposed a metrics endpoint on port 24231, Nginx could reach it at `http://localhost:24231/metrics`
+
+#### Example 2: Microservices with Ambassador Pattern
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: payment-service
+spec:
+  containers:
+  - name: payment-app
+    image: my-payment-app:1.2
+    ports:
+    - containerPort: 8080
+  - name: proxy
+    image: envoyproxy/envoy:v1.22
+    ports:
+    - containerPort: 8001
+```
+
+**Communication Flow**:
+1. External requests come to Envoy on port 8001
+2. Envoy forwards to the payment app at `http://localhost:8080`
+3. The payment app might call back to Envoy's admin interface at `http://localhost:9001`
+
+#### Example 3: Debugging with Ephemeral Containers
+
+```bash
+# Add a debug container to an existing pod
+kubectl debug -it web-server --image=busybox --target=nginx
+```
+
+Once attached, you can:
+```bash
+# From the debug container, check nginx's ports
+netstat -tulpn | grep nginx
+
+# Curl the nginx container
+curl http://localhost:80
+```
+
+### Practical Demonstration
+
+1. **Create a multi-container pod**:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-container
+spec:
+  containers:
+  - name: server
+    image: hashicorp/http-echo
+    args: ["-text", "Hello from server", "-listen", ":8080"]
+  - name: client
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "while true; do curl -s http://localhost:8080; sleep 5; done"]
+```
+
+2. **Check the logs**:
+```bash
+kubectl logs multi-container -c client
+# Output will show repeated "Hello from server" messages
+```
+
+### Important Considerations
+
+1. **Port Conflicts**: Since containers share a network namespace, they can't use the same port numbers
+   ```yaml
+   # This would FAIL because both containers try to use port 8080
+   containers:
+   - name: app1
+     image: my-app
+     ports: [{containerPort: 8080}]
+   - name: app2 
+     image: my-other-app
+     ports: [{containerPort: 8080}]
+   ```
+
+2. **DNS Resolution**: `localhost` resolution works, but using container names doesn't (unlike Docker-compose)
+
+3. **Startup Order**: There's no guaranteed startup order, so containers should handle retries when dependencies aren't ready
+
+### Debugging Tips
+
+1. Check shared network namespace:
+```bash
+kubectl exec -it multi-container -c server -- ip addr
+kubectl exec -it multi-container -c client -- ip addr
+# Both will show the same network interfaces
+```
+
+2. Test connectivity between containers:
+```bash
+kubectl exec -it multi-container -c client -- curl -v http://localhost:8080
+```
