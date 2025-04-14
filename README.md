@@ -14,6 +14,7 @@ These are my notes from the course **Docker & Kubernetes: The Practical Guide [2
 - [Section 10: GETTING STARTED WITH KUBERNETES](#section-10---getting-started-with-kubernetes)
 - [Section 11: MANAGING DATA & VOLUMES WITH KUBERNETES](#section-11-managing-data--volumes-with-kubernetes)
 - [Section 12: KUBERNETES NETWORKING](#section-12-kubernetes-networking)
+- [Section 13: KUBERNETES - DEPLOYMENT (AWS EKS)](#section-13-kubernetes---deployment-aws-eks)
 
 # [Section 1 - INTRODUCTION](#docker--kubernetes)
 
@@ -5807,6 +5808,7 @@ This combination of persistent volumes and environment variables provides a flex
 # [Section 12: KUBERNETES NETWORKING](#docker--kubernetes)
 
 - [Pod-internal Communication](#pod-internal-communication)
+- [Deploying a frontend application using Reverse Proxy](#deploying-a-frontend-application-using-reverse-proxy)
 
 ## Module Summary
 
@@ -6066,3 +6068,328 @@ kubectl exec -it multi-container -c client -- ip addr
 ```bash
 kubectl exec -it multi-container -c client -- curl -v http://localhost:8080
 ```
+
+## [Deploying a frontend application using Reverse Proxy](#section-12-kubernetes-networking)
+
+Here's how to containerize a frontend application using Nginx as a reverse proxy.
+
+### Basic Setup
+
+#### 1. Project Structure
+```
+my-frontend-app/
+├── docker/
+│   └── nginx/
+│       └── nginx.conf
+├── public/          # Your built frontend files (index.html, JS, CSS)
+├── Dockerfile
+└── docker-compose.yml
+```
+
+#### 2. Nginx Configuration (`docker/nginx/nginx.conf`)
+
+```nginx
+server {
+    listen 80;
+    server_name localhost;
+
+    location / {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;
+        index index.html index.htm;
+    }
+
+    # Handle API requests by proxying to backend
+    location /api/ {
+        proxy_pass http://backend-service:5000/; # Adjust port as needed
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # Enable gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+}
+```
+
+#### 3. Dockerfile
+
+```dockerfile
+# Stage 1: Build the frontend (if needed)
+FROM node:16 as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
+COPY --from=build /app/public /usr/share/nginx/html
+COPY docker/nginx/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+#### 4. docker-compose.yml (for local development)
+
+```yaml
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public:/usr/share/nginx/html
+    networks:
+      - app-network
+
+  # Example backend service (adjust as needed)
+  backend-service:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+```
+
+### Kubernetes Deployment
+
+For Kubernetes, you'll need these manifests:
+
+#### 1. frontend-deployment.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: your-username/frontend-app:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+```
+
+#### 2. frontend-service.yaml
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer # Or ClusterIP if using Ingress
+```
+
+#### 3. ingress.yaml (optional)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: myapp.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+```
+
+### Commands to Build and Deploy
+
+1. Build the Docker image:
+```bash
+docker build -t your-username/frontend-app .
+```
+
+2. Push to container registry (if needed):
+```bash
+docker push your-username/frontend-app
+```
+
+3. Apply Kubernetes manifests:
+```bash
+kubectl apply -f frontend-deployment.yaml
+kubectl apply -f frontend-service.yaml
+kubectl apply -f ingress.yaml
+```
+
+### Key Networking Concepts in Kubernetes
+
+1. **ClusterIP**: Internal IP for service-to-service communication
+2. **NodePort**: Exposes service on each Node's IP at a static port
+3. **LoadBalancer**: Provisions an external load balancer (cloud provider specific)
+4. **Ingress**: Manages external access to services with rules
+5. **Network Policies**: Define how pods communicate with each other
+
+This setup gives you a production-ready frontend container with Nginx reverse proxy that can be easily deployed to Kubernetes. The Nginx configuration handles static file serving, HTML5 history mode for SPAs, and API request proxying to backend services.
+
+# [Section 13: KUBERNETES - DEPLOYMENT (AWS EKS)](#docker--kubernetes)
+
+## Module Summary
+
+This module likely covers how to deploy applications to Kubernetes clusters on AWS Elastic Kubernetes Service (EKS). Here's what you can expect to learn:
+
+### Core Concepts
+
+1. **AWS EKS Overview**: Managed Kubernetes service that eliminates the need to install/operate your own K8s control plane
+2. **Deployment Objects**: Kubernetes resources that manage application deployments
+3. **Scaling**: Horizontal pod autoscaling (HPA) with EKS
+4. **Load Balancing**: Using AWS ALB or NLB with Kubernetes services
+
+### Key Commands and Examples
+
+#### 1. Cluster Setup
+
+```bash
+# Install eksctl (EKS CLI tool)
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo mv /tmp/eksctl /usr/local/bin
+
+# Create an EKS cluster
+eksctl create cluster \
+  --name my-cluster \
+  --region us-west-2 \
+  --nodegroup-name my-nodes \
+  --node-type t3.medium \
+  --nodes 3
+```
+
+#### 2. Deployment Configuration
+
+Example `deployment.yaml`:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-app
+        image: my-repo/my-app:1.0.0
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+```
+
+#### 3. Service Exposure
+
+Example `service.yaml`:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  selector:
+    app: my-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
+```
+
+#### 4. Common Operations
+
+```bash
+# Apply deployment
+kubectl apply -f deployment.yaml
+
+# Check deployment status
+kubectl get deployments
+
+# View pods
+kubectl get pods
+
+# Scale deployment
+kubectl scale deployment my-app --replicas=5
+
+# Expose service
+kubectl apply -f service.yaml
+
+# Get service URL
+kubectl get service my-app-service
+```
+
+#### 5. Auto Scaling
+
+```bash
+# Create HPA
+kubectl autoscale deployment my-app --cpu-percent=70 --min=3 --max=10
+```
+
+### Key Topics Covered
+
+1. **Cluster Creation**: Setting up EKS clusters using `eksctl` or AWS Console
+2. **Kubectl Configuration**: Setting up `kubeconfig` to interact with EKS
+3. **Deployment Strategies**: Rolling updates, blue-green deployments
+4. **Monitoring**: Integration with CloudWatch
+5. **Security**: IAM roles for service accounts (IRSA)
+6. **Networking**: VPC CNI plugin and network policies
+7. **Storage**: EBS and EFS volume integration
+
+### Best Practices
+
+- Using Infrastructure as Code (Terraform or CloudFormation)
+- Implementing CI/CD pipelines for EKS
+- Monitoring with Prometheus and Grafana
+- Cost optimization strategies for EKS
+
