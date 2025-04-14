@@ -1,24 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: users-deployment
+  name: frontend-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: users
+      app: frontend
   template:
     metadata:
       labels:
-        app: users
+        app: frontend
     spec:
       containers:
-      - name: users
-        image: jeffshenrique/kub-demo-users:latest
-        env:
-          - name: AUTH_ADDRESS
-            # value: "10.107.20.229"
-            value: "auth-service.default" ## service name + namespace
+      - name: frontend
+        image: jeffshenrique/kub-demo-frontend:latest
         # resources:
         #   limits:
         #     memory: "128Mi"

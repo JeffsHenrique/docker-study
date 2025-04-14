@@ -1,24 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: users-deployment
+  name: tasks-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: users
+      app: tasks
   template:
     metadata:
       labels:
-        app: users
+        app: tasks
     spec:
       containers:
-      - name: users
-        image: jeffshenrique/kub-demo-users:latest
+      - name: tasks
+        image: jeffshenrique/kub-demo-tasks:latest
         env:
           - name: AUTH_ADDRESS
             # value: "10.107.20.229"
             value: "auth-service.default" ## service name + namespace
+          - name: TASKS_FOLDER
+            value: tasks
         # resources:
         #   limits:
         #     memory: "128Mi"
